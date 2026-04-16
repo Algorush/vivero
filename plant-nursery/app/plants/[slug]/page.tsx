@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
 import { getPlantBySlug } from "@/lib/notion";
 
 type PlantPageProps = {
@@ -33,7 +32,10 @@ export default async function PlantPage({ params }: PlantPageProps) {
           alt={plant.name}
           width={800}
           height={400}
+          sizes="(max-width: 768px) 100vw, 768px"
+          quality={75}
           className="w-full h-auto rounded-xl mb-4"
+          priority
         />
       )}
 

@@ -1,47 +1,51 @@
 import Link from "next/link";
-import { getPlants } from "@/lib/notion";
-import PlantCard from "../components/PlantCard";
+import { getPlantCategories, getPlantsPage } from "@/lib/notion";
+import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 
 export const revalidate = 60;
 
 type HomeProps = {
-  searchParams: {
+  searchParams: Promise<{
     category?: string;
-  };
+    cursor?: string;
+  }>;
 };
 
 const normalize = (str: string) => str.toLowerCase().trim();
 
 export default async function Home({ searchParams }: HomeProps) {
-  const plants = await getPlants();
-  const category = searchParams.category;
+  const { category, cursor } = await searchParams;
 
   const activeCategory = category?.trim() || "";
+  const activeCursor = cursor?.trim() || "";
 
-  const CATEGORY_ORDER = ["Árbol", "Arbusto", "Flor", "Suculenta"];
+  const [categories, plantsPage] = await Promise.all([
+    getPlantCategories(),
+    getPlantsPage({
+      category: activeCategory || undefined,
+      cursor: activeCursor || undefined,
+      pageSize: 12,
+    }),
+  ]);
 
-  // const categories = CATEGORY_ORDER.filter((cat) =>
-  //   plants.some((p) => p.category === cat)
-  // );
-
-  const filteredPlants = activeCategory
-    ? plants.filter(
-        (plant) =>
-          normalize(plant.category) === normalize(activeCategory)
-      )
-    : plants;
+  const createFilterHref = (nextCategory?: string) => {
+    const params = new URLSearchParams();
+    if (nextCategory) {
+      params.set("category", nextCategory);
+    }
+    const query = params.toString();
+    return query ? `/?${query}` : "/";
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Vivero de Plantas</h1>
 
-      <p className="text-sm text-gray-500 mb-6">
-        {filteredPlants.length} plantas encontradas
-      </p>
+      <p className="text-sm text-gray-500 mb-6">Desplazate hacia abajo para cargar mas plantas</p>
 
       <div className="flex flex-wrap gap-2 mb-8">
         <Link
-          href="/"
+          href={createFilterHref()}
           className={`px-4 py-1.5 rounded-full border text-sm font-medium transition ${
             !activeCategory
               ? "bg-green-600 text-white border-green-600"
@@ -51,12 +55,12 @@ export default async function Home({ searchParams }: HomeProps) {
           Todas
         </Link>
 
-        {CATEGORY_ORDER.map((cat) => (
+        {categories.map((cat) => (
           <Link
             key={cat}
-            href={`/?category=${encodeURIComponent(cat)}`}
+            href={createFilterHref(cat)}
             className={`px-4 py-1.5 rounded-full border text-sm font-medium transition ${
-              activeCategory === cat
+              normalize(activeCategory) === normalize(cat)
                 ? "bg-green-600 text-white border-green-600"
                 : "border-gray-300 hover:border-green-500 hover:text-green-600 hover:bg-green-50"
             }`}
@@ -66,11 +70,13 @@ export default async function Home({ searchParams }: HomeProps) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {filteredPlants.map((plant) => (
-          <PlantCard key={plant.id} plant={plant} />
-        ))}
-      </div>
+      <PlantInfiniteGrid
+        key={activeCategory || "all"}
+        initialPlants={plantsPage.plants}
+        initialNextCursor={plantsPage.nextCursor}
+        initialHasMore={plantsPage.hasMore}
+        category={activeCategory}
+      />
     </div>
   );
 }
