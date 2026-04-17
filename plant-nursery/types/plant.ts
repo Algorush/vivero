@@ -8,4 +8,5 @@ export type Plant = {
   amount: number;
   available: boolean;
   image: string;
+  images: string[];
 };

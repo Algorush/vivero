@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import ImageCarousel from "@/components/ImageCarousel";
 import { Plant } from "@/types/plant";
 
 type PlantCardProps = {
@@ -14,16 +14,15 @@ export default function PlantCard({
   return (
     <Link href={`/plants/${plant.slug}`}>
       <div className="border rounded-2xl p-4 shadow hover:shadow-lg transition bg-white">
-        {plant.image && (
+        {plant.images?.length > 0 && (
           <div className="relative w-full h-48 rounded-xl mb-3 overflow-hidden">
-            <Image
-              src={plant.image}
+            <ImageCarousel
+              images={plant.images}
               alt={plant.name}
               fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               priority={priority}
-              quality={70}
+              quality={85}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           </div>
         )}

@@ -201,6 +201,12 @@ const getPlantBySlugCached = unstable_cache(
 );
 
 function mapPlant(page: NotionPage): Plant {
+  const allImages = (
+    page.properties.Image?.files ?? []
+  )
+    .map((f) => f.file?.url ?? "")
+    .filter(Boolean);
+
   return {
     id: page.id,
     name: page.properties.Title?.title?.[0]?.plain_text || "",
@@ -210,6 +216,7 @@ function mapPlant(page: NotionPage): Plant {
     price: page.properties.Price?.number || 0,
     amount: page.properties.Amount?.number || 0,
     available: page.properties.Available?.checkbox || false,
-    image: page.properties.Image?.files?.[0]?.file?.url || "",
+    image: allImages[0] ?? "",
+    images: allImages,
   };
 }

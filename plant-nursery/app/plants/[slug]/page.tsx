@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ImageCarousel from "@/components/ImageCarousel";
 
 import { getPlantBySlug } from "@/lib/notion";
 
@@ -26,16 +26,15 @@ export default async function PlantPage({ params }: PlantPageProps) {
 
       <h1 className="text-3xl font-bold mb-4">{plant.name}</h1>
 
-      {plant.image && (
-        <Image
-          src={plant.image}
+      {plant.images?.length > 0 && (
+        <ImageCarousel
+          images={plant.images}
           alt={plant.name}
-          width={800}
-          height={400}
-          sizes="(max-width: 768px) 100vw, 768px"
-          quality={75}
-          className="w-full h-auto rounded-xl mb-4"
+          natural
           priority
+          quality={95}
+          sizes="100vw"
+          className="mb-4"
         />
       )}
 
