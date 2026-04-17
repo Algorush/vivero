@@ -47,6 +47,9 @@ type NotionBlock = {
   heading_1?: { rich_text?: NotionRichTextItem[] };
   heading_2?: { rich_text?: NotionRichTextItem[] };
   heading_3?: { rich_text?: NotionRichTextItem[] };
+  bookmark?: { url?: string };
+  embed?: { url?: string };
+  link_preview?: { url?: string };
   image?: {
     type?: "file" | "external";
     file?: { url?: string };
@@ -68,7 +71,22 @@ export type NurseryProfile = {
   title: string;
   description: string;
   image: string;
+  phone: string;
+  whatsappText: string;
+  ownerName: string;
+  location: string;
+  mapUrl: string;
 };
+
+type NurserySection =
+  | "title"
+  | "description"
+  | "image"
+  | "phone"
+  | "whatsappText"
+  | "ownerName"
+  | "location"
+  | "mapUrl";
 
 // --- Constants ---------------------------------------------------------------
 const DEFAULT_PAGE_SIZE = 12;
@@ -111,6 +129,74 @@ function normalizeNotionPageId(value: string): string {
 // Converts rich text array into a plain string.
 function richTextToPlain(items?: NotionRichTextItem[]): string {
   return (items ?? []).map((item) => item.plain_text ?? "").join("").trim();
+}
+
+// Returns heading text from heading_1/2/3 blocks.
+function getHeadingText(block: NotionBlock): string {
+  if (block.type === "heading_1") {
+    return richTextToPlain(block.heading_1?.rich_text);
+  }
+
+  if (block.type === "heading_2") {
+    return richTextToPlain(block.heading_2?.rich_text);
+  }
+
+  if (block.type === "heading_3") {
+    return richTextToPlain(block.heading_3?.rich_text);
+  }
+
+  return "";
+}
+
+// Returns text content from paragraph blocks.
+function getParagraphText(block: NotionBlock): string {
+  if (block.type !== "paragraph") {
+    return "";
+  }
+
+  return richTextToPlain(block.paragraph?.rich_text);
+}
+
+// Returns a URL from supported link-like blocks.
+function getBlockUrl(block: NotionBlock): string {
+  if (block.type === "embed") {
+    return block.embed?.url ?? "";
+  }
+
+  if (block.type === "bookmark") {
+    return block.bookmark?.url ?? "";
+  }
+
+  if (block.type === "link_preview") {
+    return block.link_preview?.url ?? "";
+  }
+
+  const paragraph = getParagraphText(block);
+  return paragraph.startsWith("http") ? paragraph : "";
+}
+
+// Normalizes headings to compare section keys safely.
+function normalizeHeading(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+// Maps heading text to nursery profile section keys.
+function headingToSection(heading: string): NurserySection | null {
+  const key = normalizeHeading(heading);
+
+  if (key === "description") return "description";
+  if (key === "photo principal") return "image";
+  if (key === "telefono") return "phone";
+  if (key === "text whatsapp") return "whatsappText";
+  if (key === "nombre") return "ownerName";
+  if (key === "ubicacion") return "location";
+  if (key === "direccion") return "mapUrl";
+
+  return null;
 }
 
 // Returns image URL from image block.
@@ -309,37 +395,79 @@ const getNurseryProfileCached = unstable_cache(
 
     const blocks = children.results ?? [];
 
-    const title =
-      blocks
-        .filter(
-          (block) =>
-            block.type === "heading_1" ||
-            block.type === "heading_2" ||
-            block.type === "heading_3"
-        )
-        .map((block) => {
-          if (block.type === "heading_1") return richTextToPlain(block.heading_1?.rich_text);
-          if (block.type === "heading_2") return richTextToPlain(block.heading_2?.rich_text);
-          return richTextToPlain(block.heading_3?.rich_text);
-        })
-        .find(Boolean) ?? "Sobre nuestro vivero";
+    const firstHeading = blocks
+      .map(getHeadingText)
+      .find(Boolean);
 
-    const description =
-      blocks
-        .filter((block) => block.type === "paragraph")
-        .map((block) => richTextToPlain(block.paragraph?.rich_text))
+    const profile: NurseryProfile = {
+      title: firstHeading || "Sobre nuestro vivero",
+      description: "",
+      image: "",
+      phone: "",
+      whatsappText: "",
+      ownerName: "",
+      location: "",
+      mapUrl: "",
+    };
+
+    let currentSection: NurserySection | null = null;
+
+    for (const block of blocks) {
+      const heading = getHeadingText(block);
+      if (heading) {
+        const section = headingToSection(heading);
+        currentSection = section;
+        continue;
+      }
+
+      if (!currentSection) {
+        continue;
+      }
+
+      if (currentSection === "image" && !profile.image) {
+        profile.image = getImageFromBlock(block);
+        continue;
+      }
+
+      if (currentSection === "mapUrl" && !profile.mapUrl) {
+        profile.mapUrl = getBlockUrl(block);
+        continue;
+      }
+
+      const paragraphText = getParagraphText(block);
+      if (!paragraphText) {
+        continue;
+      }
+
+      if (currentSection === "description" && !profile.description) {
+        profile.description = paragraphText;
+      } else if (currentSection === "phone" && !profile.phone) {
+        profile.phone = paragraphText;
+      } else if (currentSection === "whatsappText" && !profile.whatsappText) {
+        profile.whatsappText = paragraphText;
+      } else if (currentSection === "ownerName" && !profile.ownerName) {
+        profile.ownerName = paragraphText;
+      } else if (currentSection === "location" && !profile.location) {
+        profile.location = paragraphText;
+      } else if (currentSection === "mapUrl" && !profile.mapUrl) {
+        profile.mapUrl = paragraphText;
+      }
+    }
+
+    if (!profile.description) {
+      profile.description = blocks
+        .map(getParagraphText)
         .find(Boolean) ?? "";
+    }
 
-    const image =
-      blocks
-        .filter((block) => block.type === "image")
+    if (!profile.image) {
+      profile.image = blocks
         .map(getImageFromBlock)
         .find(Boolean) ?? "";
+    }
 
     return {
-      title,
-      description,
-      image,
+      ...profile,
     };
   },
   ["notion-nursery-profile"],
