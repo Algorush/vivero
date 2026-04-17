@@ -2,12 +2,14 @@ import { Client } from "@notionhq/client";
 import { unstable_cache } from "next/cache";
 import type { Plant } from "@/types/plant";
 
-// Legacy API (2022-06-28) — workspace not yet migrated to data sources
+// --- Notion client -----------------------------------------------------------
+// Legacy API version while the workspace is not migrated to data sources.
 const notionLegacy = new Client({
   auth: process.env.NOTION_API_KEY,
-  notionVersion: "2022-06-28", // legacy support
+  notionVersion: "2022-06-28",
 });
 
+// --- Types -------------------------------------------------------------------
 type NotionPage = {
   id: string;
   object: string;
@@ -35,16 +37,47 @@ type GetPlantsPageOptions = {
   pageSize?: number;
 };
 
+type NotionRichTextItem = {
+  plain_text?: string;
+};
+
+type NotionBlock = {
+  type?: string;
+  paragraph?: { rich_text?: NotionRichTextItem[] };
+  heading_1?: { rich_text?: NotionRichTextItem[] };
+  heading_2?: { rich_text?: NotionRichTextItem[] };
+  heading_3?: { rich_text?: NotionRichTextItem[] };
+  image?: {
+    type?: "file" | "external";
+    file?: { url?: string };
+    external?: { url?: string };
+  };
+};
+
+type NotionBlocksResponse = {
+  results?: NotionBlock[];
+};
+
 export type PlantsPageResult = {
   plants: Plant[];
   nextCursor: string | null;
   hasMore: boolean;
 };
 
+export type NurseryProfile = {
+  title: string;
+  description: string;
+  image: string;
+};
+
+// --- Constants ---------------------------------------------------------------
 const DEFAULT_PAGE_SIZE = 12;
 const CACHE_REVALIDATE_SECONDS = 60;
+const NURSERY_PAGE_RAW_ID = "Vivero-Carilemu-33a014ba6d4b8024b8caf02162fc9492";
 export const PLANTS_REVALIDATE_TAG = "plants";
 
+// --- Small helpers -----------------------------------------------------------
+// Resolves the Notion database ID from env vars.
 function getDatabaseId(): string {
   const databaseId =
     process.env.NOTION_DATA_SOURCE_ID ?? process.env.NOTION_DB_ID;
@@ -56,11 +89,65 @@ function getDatabaseId(): string {
   return databaseId;
 }
 
+// Normalizes a category filter value.
 function normalizeCategory(category?: string): string | undefined {
   const value = category?.trim();
   return value || undefined;
 }
 
+// Extracts and formats a canonical UUID from a mixed page identifier.
+function normalizeNotionPageId(value: string): string {
+  const compact = value.replace(/-/g, "");
+  const match = compact.match(/[0-9a-fA-F]{32}/);
+
+  if (!match) {
+    return value;
+  }
+
+  const id = match[0].toLowerCase();
+  return `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
+}
+
+// Converts rich text array into a plain string.
+function richTextToPlain(items?: NotionRichTextItem[]): string {
+  return (items ?? []).map((item) => item.plain_text ?? "").join("").trim();
+}
+
+// Returns image URL from image block.
+function getImageFromBlock(block: NotionBlock): string {
+  if (block.image?.type === "file") {
+    return block.image.file?.url ?? "";
+  }
+
+  if (block.image?.type === "external") {
+    return block.image.external?.url ?? "";
+  }
+
+  return "";
+}
+
+// Maps Notion database page to internal Plant model.
+function mapPlant(page: NotionPage): Plant {
+  const allImages = (page.properties.Image?.files ?? [])
+    .map((f) => f.file?.url ?? "")
+    .filter(Boolean);
+
+  return {
+    id: page.id,
+    name: page.properties.Title?.title?.[0]?.plain_text || "",
+    slug: page.properties.Slug?.rich_text?.[0]?.plain_text || "",
+    description: page.properties.Description?.rich_text?.[0]?.plain_text || "",
+    category: page.properties.Category?.select?.name || "",
+    price: page.properties.Price?.number || 0,
+    amount: page.properties.Amount?.number || 0,
+    available: page.properties.Available?.checkbox || false,
+    image: allImages[0] ?? "",
+    images: allImages,
+  };
+}
+
+// --- Notion requests ---------------------------------------------------------
+// Queries plants with optional category, slug and cursor filters.
 async function queryPlants(params?: {
   category?: string;
   cursor?: string;
@@ -94,10 +181,47 @@ async function queryPlants(params?: {
   });
 }
 
+// --- Public API --------------------------------------------------------------
+// Returns all plants from cache.
 export async function getPlants(): Promise<Plant[]> {
   return getPlantsCached();
 }
 
+// Returns a paginated list of plants.
+export async function getPlantsPage(
+  options: GetPlantsPageOptions = {}
+): Promise<PlantsPageResult> {
+  const category = normalizeCategory(options.category) ?? "";
+  const cursor = options.cursor?.trim() ?? "";
+  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+
+  return getPlantsPageCached(category, cursor, pageSize);
+}
+
+// Returns unique sorted plant categories.
+export async function getPlantCategories(): Promise<string[]> {
+  const plants = await getPlantsCached();
+  return Array.from(
+    new Set(
+      plants
+        .map((p) => p.category?.trim())
+        .filter((cat): cat is string => Boolean(cat))
+    )
+  ).sort((a, b) => a.localeCompare(b, "es"));
+}
+
+// Returns one plant by slug.
+export async function getPlantBySlug(slug: string): Promise<Plant | null> {
+  return getPlantBySlugCached(slug.trim());
+}
+
+// Returns nursery profile from the dedicated Notion page.
+export async function getNurseryProfile(): Promise<NurseryProfile> {
+  return getNurseryProfileCached();
+}
+
+// --- Cached queries ----------------------------------------------------------
+// Cached full list for catalog and category derivation.
 const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
   const plants: Plant[] = [];
   let cursor: string | undefined;
@@ -109,11 +233,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
       pageSize: 100,
     });
 
-    plants.push(
-      ...response.results
-        .filter((p) => p.object === "page")
-        .map(mapPlant)
-    );
+    plants.push(...response.results.filter((p) => p.object === "page").map(mapPlant));
 
     cursor = response.next_cursor ?? undefined;
     hasMore = Boolean(response.has_more && cursor);
@@ -125,6 +245,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
   tags: [PLANTS_REVALIDATE_TAG],
 });
 
+// Cached paginated query for infinite scrolling.
 const getPlantsPageCached = unstable_cache(
   async (
     category: string,
@@ -154,31 +275,7 @@ const getPlantsPageCached = unstable_cache(
   }
 );
 
-export async function getPlantsPage(
-  options: GetPlantsPageOptions = {}
-): Promise<PlantsPageResult> {
-  const category = normalizeCategory(options.category) ?? "";
-  const cursor = options.cursor?.trim() ?? "";
-  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
-
-  return getPlantsPageCached(category, cursor, pageSize);
-}
-
-export async function getPlantCategories(): Promise<string[]> {
-  const plants = await getPlantsCached();
-  return Array.from(
-    new Set(
-      plants
-        .map((p) => p.category?.trim())
-        .filter((cat): cat is string => Boolean(cat))
-    )
-  ).sort((a, b) => a.localeCompare(b, "es"));
-}
-
-export async function getPlantBySlug(slug: string): Promise<Plant | null> {
-  return getPlantBySlugCached(slug.trim());
-}
-
+// Cached slug lookup for details page.
 const getPlantBySlugCached = unstable_cache(
   async (slug: string): Promise<Plant | null> => {
     if (!slug) {
@@ -200,23 +297,54 @@ const getPlantBySlugCached = unstable_cache(
   }
 );
 
-function mapPlant(page: NotionPage): Plant {
-  const allImages = (
-    page.properties.Image?.files ?? []
-  )
-    .map((f) => f.file?.url ?? "")
-    .filter(Boolean);
+// Cached nursery content: first heading, first paragraph and first image.
+const getNurseryProfileCached = unstable_cache(
+  async (): Promise<NurseryProfile> => {
+    const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
 
-  return {
-    id: page.id,
-    name: page.properties.Title?.title?.[0]?.plain_text || "",
-    slug: page.properties.Slug?.rich_text?.[0]?.plain_text || "",
-    description: page.properties.Description?.rich_text?.[0]?.plain_text || "",
-    category: page.properties.Category?.select?.name || "",
-    price: page.properties.Price?.number || 0,
-    amount: page.properties.Amount?.number || 0,
-    available: page.properties.Available?.checkbox || false,
-    image: allImages[0] ?? "",
-    images: allImages,
-  };
-}
+    const children = await notionLegacy.request<NotionBlocksResponse>({
+      path: `blocks/${pageId}/children?page_size=50`,
+      method: "get",
+    });
+
+    const blocks = children.results ?? [];
+
+    const title =
+      blocks
+        .filter(
+          (block) =>
+            block.type === "heading_1" ||
+            block.type === "heading_2" ||
+            block.type === "heading_3"
+        )
+        .map((block) => {
+          if (block.type === "heading_1") return richTextToPlain(block.heading_1?.rich_text);
+          if (block.type === "heading_2") return richTextToPlain(block.heading_2?.rich_text);
+          return richTextToPlain(block.heading_3?.rich_text);
+        })
+        .find(Boolean) ?? "Sobre nuestro vivero";
+
+    const description =
+      blocks
+        .filter((block) => block.type === "paragraph")
+        .map((block) => richTextToPlain(block.paragraph?.rich_text))
+        .find(Boolean) ?? "";
+
+    const image =
+      blocks
+        .filter((block) => block.type === "image")
+        .map(getImageFromBlock)
+        .find(Boolean) ?? "";
+
+    return {
+      title,
+      description,
+      image,
+    };
+  },
+  ["notion-nursery-profile"],
+  {
+    revalidate: CACHE_REVALIDATE_SECONDS,
+    tags: [PLANTS_REVALIDATE_TAG],
+  }
+);
