@@ -1,7 +1,6 @@
-import Link from "next/link";
 import Image from "next/image";
 import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/notion";
-import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
+import PlantCatalog from "@/components/PlantCatalog";
 
 export const revalidate = 60;
 
@@ -11,8 +10,6 @@ type HomeProps = {
     cursor?: string;
   }>;
 };
-
-const normalize = (str: string) => str.toLowerCase().trim();
 
 function sanitizePhoneToWa(value: string): string {
   return value.replace(/[^\d]/g, "");
@@ -33,15 +30,6 @@ export default async function Home({ searchParams }: HomeProps) {
       pageSize: 12,
     }),
   ]);
-
-  const createFilterHref = (nextCategory?: string) => {
-    const params = new URLSearchParams();
-    if (nextCategory) {
-      params.set("category", nextCategory);
-    }
-    const query = params.toString();
-    return query ? `/?${query}` : "/";
-  };
 
   const waPhone = sanitizePhoneToWa(nurseryProfile.phone);
   const waHref =
@@ -129,50 +117,11 @@ plantas nativas y exóticas
       <div className="mapuche-pattern-strip relative left-1/2 -mx-[50vw] mb-8 h-24 w-screen" />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
-
-        <div className="mapuche-paper-surface sticky top-2 z-20 -mx-2 mb-8 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-0">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
-            <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <Link
-              href={createFilterHref()}
-              className={`mapuche-chip shrink-0 ${
-                !activeCategory
-                  ? "mapuche-chip-active"
-                  : "mapuche-chip-idle"
-              }`}
-            >
-              Todas
-            </Link>
-
-            {categories.map((cat) => (
-              <Link
-                key={cat}
-                href={createFilterHref(cat)}
-                className={`mapuche-chip shrink-0 ${
-                  normalize(activeCategory) === normalize(cat)
-                    ? "mapuche-chip-active"
-                    : "mapuche-chip-idle"
-                }`}
-              >
-                {cat}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative">
-          <PlantInfiniteGrid
-            key={activeCategory || "all"}
-            initialPlants={plantsPage.plants}
-            initialNextCursor={plantsPage.nextCursor}
-            initialHasMore={plantsPage.hasMore}
-            category={activeCategory}
-          />
-        </div>
+        <PlantCatalog
+          categories={categories}
+          initialCategory={activeCategory}
+          initialPage={plantsPage}
+        />
       </div>
     </>
   );
