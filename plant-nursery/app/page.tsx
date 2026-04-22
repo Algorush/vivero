@@ -51,120 +51,129 @@ export default async function Home({ searchParams }: HomeProps) {
         ? `https://wa.me/${waPhone}`
         : "";
 
+  const mapHref = nurseryProfile.mapUrl?.trim() || "";
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Vivero de Plantas</h1>
+    <>
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen min-h-[100svh] overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]">
+        {nurseryProfile.image && (
+          <Image
+            src={nurseryProfile.image}
+            alt="Vivero de plantas nativas y exoticas Carilemu"
+            fill
+            priority
+            unoptimized
+            className="object-cover"
+            sizes="100vw"
+          />
+        )}
 
-      <p className="text-sm text-gray-500 mb-6">Desplazate hacia abajo para cargar mas plantas</p>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#16352f]/45 via-[#2f5f4f]/30 to-[#16352f]/50" />
 
-      {(nurseryProfile.image || nurseryProfile.description || nurseryProfile.phone || nurseryProfile.ownerName || nurseryProfile.location || nurseryProfile.mapUrl) && (
-        <section className="mb-8 rounded-2xl border border-green-100 bg-green-50/40 p-4 md:p-6">
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center">
-            {nurseryProfile.image && (
-              <div className="overflow-hidden rounded-xl bg-white">
-                <Image
-                  src={nurseryProfile.image}
-                  alt={nurseryProfile.title || "Vivero Carilemu"}
-                  width={1600}
-                  height={1200}
-                  className="block h-auto w-full object-contain"
-                  priority
-                  unoptimized
-                  sizes="(max-width: 1024px) 100vw, 60vw"
-                />
-              </div>
+        <div className="relative z-10 flex min-h-[100svh] items-start p-4 pt-8 sm:p-6 sm:pt-10 md:items-end md:p-10">
+          <div className="mapuche-hero-overlay w-full max-w-3xl rounded-3xl p-5 backdrop-blur-md sm:p-6 md:p-8">
+            <h1 className="text-3xl font-bold leading-tight text-[#f8f0e4] md:text-5xl">
+              Vivero &quot;karū-lemu&quot; -
+plantas nativas y exóticas
+            </h1>
+
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-white md:text-lg">
+              {nurseryProfile.description || "Explora el catalogo y descubre plantas nativas y exoticas para tu espacio."}
+            </p>
+
+            <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#f2dcc0]">
+              {/* Inspirado en la identidad mapuche de la Araucania */}
+            </p>
+
+            {nurseryProfile.phone && (
+              <p className="mt-4 text-sm text-white/90">
+                Telefono: {nurseryProfile.phone}
+              </p>
             )}
 
-            <div>
-              <h2 className="mb-2 text-2xl font-semibold text-green-900">
-                {nurseryProfile.title || "Vivero Carilemu"}
-              </h2>
+            {nurseryProfile.location && (
+              <p className="text-sm text-white/90">
+                Ubicacion: {nurseryProfile.location}
+              </p>
+            )}
 
-              {nurseryProfile.ownerName && (
-                <p className="mb-2 text-sm font-medium text-green-900/90">
-                  {nurseryProfile.ownerName}
-                </p>
-              )}
-
-              {nurseryProfile.description && (
-                <p className="whitespace-pre-line text-sm leading-6 text-green-900/90">
-                  {nurseryProfile.description}
-                </p>
-              )}
-
-              <div className="mt-4 space-y-1 text-sm text-green-900/90">
-                {nurseryProfile.phone && (
-                  <p>Telefono: {nurseryProfile.phone}</p>
+            {(waHref || mapHref) && (
+              <div className="mt-5 flex flex-wrap gap-3">
+                {waHref && (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mapuche-button-primary"
+                  >
+                    Escribir por WhatsApp
+                  </a>
                 )}
-                {nurseryProfile.location && (
-                  <p>Ubicacion: {nurseryProfile.location}</p>
+
+                {mapHref && (
+                  <a
+                    href={mapHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mapuche-button-secondary"
+                  >
+                    Ver direccion en mapa
+                  </a>
                 )}
               </div>
-
-              {(waHref || nurseryProfile.mapUrl) && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {waHref && (
-                    <a
-                      href={waHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                    >
-                      Escribir por WhatsApp
-                    </a>
-                  )}
-
-                  {nurseryProfile.mapUrl && (
-                    <a
-                      href={nurseryProfile.mapUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full border border-green-600 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
-                    >
-                      Ver direccion en mapa
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      <div className="flex flex-wrap gap-2 mb-8">
-        <Link
-          href={createFilterHref()}
-          className={`px-4 py-1.5 rounded-full border text-sm font-medium transition ${
-            !activeCategory
-              ? "bg-green-600 text-white border-green-600"
-              : "border-gray-300 hover:border-green-500 hover:text-green-600 hover:bg-green-50"
-          }`}
-        >
-          Todas
-        </Link>
+      <div className="mapuche-pattern-strip relative left-1/2 -mx-[50vw] mb-8 h-24 w-screen" />
 
-        {categories.map((cat) => (
-          <Link
-            key={cat}
-            href={createFilterHref(cat)}
-            className={`px-4 py-1.5 rounded-full border text-sm font-medium transition ${
-              normalize(activeCategory) === normalize(cat)
-                ? "bg-green-600 text-white border-green-600"
-                : "border-gray-300 hover:border-green-500 hover:text-green-600 hover:bg-green-50"
-            }`}
-          >
-            {cat}
-          </Link>
-        ))}
+      <div className="mx-auto max-w-6xl px-4 py-8">
+
+        <div className="mapuche-paper-surface sticky top-2 z-20 -mx-2 mb-8 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-0">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
+            <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <Link
+              href={createFilterHref()}
+              className={`mapuche-chip shrink-0 ${
+                !activeCategory
+                  ? "mapuche-chip-active"
+                  : "mapuche-chip-idle"
+              }`}
+            >
+              Todas
+            </Link>
+
+            {categories.map((cat) => (
+              <Link
+                key={cat}
+                href={createFilterHref(cat)}
+                className={`mapuche-chip shrink-0 ${
+                  normalize(activeCategory) === normalize(cat)
+                    ? "mapuche-chip-active"
+                    : "mapuche-chip-idle"
+                }`}
+              >
+                {cat}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative">
+          <PlantInfiniteGrid
+            key={activeCategory || "all"}
+            initialPlants={plantsPage.plants}
+            initialNextCursor={plantsPage.nextCursor}
+            initialHasMore={plantsPage.hasMore}
+            category={activeCategory}
+          />
+        </div>
       </div>
-
-      <PlantInfiniteGrid
-        key={activeCategory || "all"}
-        initialPlants={plantsPage.plants}
-        initialNextCursor={plantsPage.nextCursor}
-        initialHasMore={plantsPage.hasMore}
-        category={activeCategory}
-      />
-    </div>
+    </>
   );
 }

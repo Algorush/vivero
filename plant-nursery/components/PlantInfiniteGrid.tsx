@@ -173,6 +173,7 @@ export default function PlantInfiniteGrid({
             key={plant.id}
             plant={plant}
             priority={index === 0}
+            animationDelayMs={(index % 12) * 45}
           />
         ))}
       </div>

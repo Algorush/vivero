@@ -5,15 +5,20 @@ import { Plant } from "@/types/plant";
 type PlantCardProps = {
   plant: Plant;
   priority?: boolean;
+  animationDelayMs?: number;
 };
 
 export default function PlantCard({
   plant,
   priority = false,
+  animationDelayMs = 0,
 }: PlantCardProps) {
   return (
     <Link href={`/plants/${plant.slug}`}>
-      <div className="border rounded-2xl p-4 shadow hover:shadow-lg transition bg-white">
+      <div
+        className="animate-card-in border rounded-2xl bg-white p-4 shadow transition hover:shadow-lg motion-reduce:animate-none"
+        style={{ animationDelay: `${animationDelayMs}ms` }}
+      >
         {plant.images?.length > 0 && (
           <div className="relative w-full h-48 rounded-xl mb-3 overflow-hidden">
             <ImageCarousel
