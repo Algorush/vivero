@@ -8,6 +8,7 @@ type HomeProps = {
   searchParams: Promise<{
     category?: string;
     cursor?: string;
+    q?: string;
   }>;
 };
 
@@ -16,10 +17,11 @@ function sanitizePhoneToWa(value: string): string {
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { category, cursor } = await searchParams;
+  const { category, cursor, q } = await searchParams;
 
   const activeCategory = category?.trim() || "";
   const activeCursor = cursor?.trim() || "";
+  const activeQuery = q?.trim() || "";
 
   const [nurseryProfile, categories, plantsPage] = await Promise.all([
     getNurseryProfile(),
@@ -27,6 +29,7 @@ export default async function Home({ searchParams }: HomeProps) {
     getPlantsPage({
       category: activeCategory || undefined,
       cursor: activeCursor || undefined,
+      query: activeQuery || undefined,
       pageSize: 12,
     }),
   ]);
@@ -114,12 +117,19 @@ plantas nativas y exóticas
         </div>
       </section>
 
-      <div className="mapuche-pattern-strip relative left-1/2 -mx-[50vw] mb-8 h-24 w-screen" />
+      <div className="relative left-1/2 -mx-[50vw] mb-8 h-24 w-screen overflow-hidden">
+        <img
+          src="/illustrations/diamond-separator.svg"
+          alt="Diamond separator"
+          className="h-full w-full object-cover"
+        />
+      </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8">
         <PlantCatalog
           categories={categories}
           initialCategory={activeCategory}
+          initialQuery={activeQuery}
           initialPage={plantsPage}
         />
       </div>

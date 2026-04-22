@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
@@ -8,6 +8,7 @@ import type { PlantsPageResult } from "@/lib/notion";
 type PlantCatalogProps = {
   categories: string[];
   initialCategory: string;
+  initialQuery: string;
   initialPage: PlantsPageResult;
 };
 
@@ -24,23 +25,30 @@ function isPlantsPageResult(data: PlantsApiResponse): data is PlantsPageResult {
   );
 }
 
-function createFilterUrl(category?: string): string {
+function createFilterUrl(category?: string, searchQuery?: string): string {
   const params = new URLSearchParams();
 
   if (category) {
     params.set("category", category);
   }
 
-  const query = params.toString();
-  return query ? `/?${query}` : "/";
+  if (searchQuery) {
+    params.set("q", searchQuery);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/?${queryString}` : "/";
 }
 
 export default function PlantCatalog({
   categories,
   initialCategory,
+  initialQuery,
   initialPage,
 }: PlantCatalogProps) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [searchInput, setSearchInput] = useState(initialQuery);
+  const [activeQuery, setActiveQuery] = useState(initialQuery);
   const [page, setPage] = useState(initialPage);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState("");
@@ -48,13 +56,20 @@ export default function PlantCatalog({
 
   useEffect(() => {
     setActiveCategory(initialCategory);
+    setSearchInput(initialQuery);
+    setActiveQuery(initialQuery);
     setPage(initialPage);
     setFilterError("");
     setIsFilterLoading(false);
-  }, [initialCategory, initialPage]);
+  }, [initialCategory, initialPage, initialQuery]);
 
-  const applyCategory = async (nextCategory: string) => {
-    if (normalize(nextCategory) === normalize(activeCategory)) {
+  const applyFilters = useCallback(async (nextCategory: string, rawQuery: string) => {
+    const nextQuery = rawQuery.trim();
+
+    if (
+      normalize(nextCategory) === normalize(activeCategory) &&
+      nextQuery === activeQuery
+    ) {
       return;
     }
 
@@ -68,6 +83,9 @@ export default function PlantCatalog({
       const query = new URLSearchParams();
       if (nextCategory) {
         query.set("category", nextCategory);
+      }
+      if (nextQuery) {
+        query.set("q", nextQuery);
       }
       query.set("pageSize", "12");
 
@@ -89,10 +107,15 @@ export default function PlantCatalog({
       }
 
       setActiveCategory(nextCategory);
+      setActiveQuery(nextQuery);
       setPage(data);
 
       if (typeof window !== "undefined") {
-        window.history.replaceState({}, "", createFilterUrl(nextCategory));
+        window.history.replaceState(
+          {},
+          "",
+          createFilterUrl(nextCategory, nextQuery)
+        );
       }
     } catch (error) {
       if (requestIdRef.current !== requestId) {
@@ -109,7 +132,17 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  };
+  }, [activeCategory, activeQuery]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void applyFilters(activeCategory, searchInput);
+    }, 320);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [activeCategory, applyFilters, searchInput]);
 
   return (
     <>
@@ -119,10 +152,21 @@ export default function PlantCatalog({
           <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
         </div>
 
+        <div className="mb-3">
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Buscar por nombre, descripcion, flor, riego..."
+            className="w-full rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-2 text-sm text-[#1f1a17] placeholder:text-zinc-500 focus:border-[#2f5f4f] focus:outline-none"
+            aria-label="Buscar plantas"
+          />
+        </div>
+
         <div className="flex gap-2 overflow-x-auto pb-2">
           <button
             type="button"
-            onClick={() => void applyCategory("")}
+            onClick={() => void applyFilters("", searchInput)}
             disabled={isFilterLoading}
             className={`mapuche-chip shrink-0 ${
               !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
@@ -139,7 +183,7 @@ export default function PlantCatalog({
               <button
                 key={category}
                 type="button"
-                onClick={() => void applyCategory(category)}
+                onClick={() => void applyFilters(category, searchInput)}
                 disabled={isFilterLoading}
                 className={`mapuche-chip shrink-0 ${
                   isActive ? "mapuche-chip-active" : "mapuche-chip-idle"
@@ -163,11 +207,12 @@ export default function PlantCatalog({
 
       <div className="relative">
         <PlantInfiniteGrid
-          key={activeCategory || "all"}
+          key={`${activeCategory || "all"}:${activeQuery}`}
           initialPlants={page.plants}
           initialNextCursor={page.nextCursor}
           initialHasMore={page.hasMore}
           category={activeCategory}
+          query={activeQuery}
         />
       </div>
     </>

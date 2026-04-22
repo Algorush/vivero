@@ -41,6 +41,7 @@ type LegacyQueryResponse = {
 type GetPlantsPageOptions = {
   category?: string;
   cursor?: string;
+  query?: string;
   pageSize?: number;
 };
 
@@ -98,7 +99,7 @@ type NurserySection =
 // --- Constants ---------------------------------------------------------------
 const DEFAULT_PAGE_SIZE = 12;
 const CACHE_REVALIDATE_SECONDS = 60;
-const NURSERY_PAGE_RAW_ID = "Vivero-Carilemu-33a014ba6d4b8024b8caf02162fc9492";
+const NURSERY_PAGE_RAW_ID = "Vivero-Kar-lemu-plantas-nativas-y-ex-ticas-33a014ba6d4b8024b8caf02162fc9492";
 export const PLANTS_REVALIDATE_TAG = "plants";
 
 // --- Small helpers -----------------------------------------------------------
@@ -118,6 +119,28 @@ function getDatabaseId(): string {
 function normalizeCategory(category?: string): string | undefined {
   const value = category?.trim();
   return value || undefined;
+}
+
+function normalizeSearchQuery(query?: string): string | undefined {
+  const value = query?.trim();
+  return value || undefined;
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function parseOffsetCursor(cursor: string): number {
+  if (!cursor.startsWith("offset:")) {
+    return 0;
+  }
+
+  const offset = Number(cursor.slice("offset:".length));
+  return Number.isFinite(offset) && offset >= 0 ? offset : 0;
 }
 
 // Extracts and formats a canonical UUID from a mixed page identifier.
@@ -297,7 +320,50 @@ export async function getPlantsPage(
 ): Promise<PlantsPageResult> {
   const category = normalizeCategory(options.category) ?? "";
   const cursor = options.cursor?.trim() ?? "";
+  const query = normalizeSearchQuery(options.query) ?? "";
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+
+  if (query) {
+    const normalizedQuery = normalizeSearchText(query);
+    const normalizedCategory = normalizeSearchText(category);
+
+    const filteredPlants = (await getPlantsCached()).filter((plant) => {
+      if (
+        category &&
+        normalizeSearchText(plant.category ?? "") !== normalizedCategory
+      ) {
+        return false;
+      }
+
+      const searchableText = [
+        plant.name,
+        plant.category,
+        plant.description,
+        plant.flor,
+        plant.riego,
+        plant.suelo,
+        plant.florece,
+        plant.exposicion,
+        plant.fruta,
+        plant.tamano,
+      ]
+        .map((value) => normalizeSearchText(value ?? ""))
+        .join(" ");
+
+      return searchableText.includes(normalizedQuery);
+    });
+
+    const startIndex = parseOffsetCursor(cursor);
+    const plants = filteredPlants.slice(startIndex, startIndex + pageSize);
+    const nextIndex = startIndex + plants.length;
+    const hasMore = nextIndex < filteredPlants.length;
+
+    return {
+      plants,
+      nextCursor: hasMore ? `offset:${nextIndex}` : null,
+      hasMore,
+    };
+  }
 
   return getPlantsPageCached(category, cursor, pageSize);
 }
