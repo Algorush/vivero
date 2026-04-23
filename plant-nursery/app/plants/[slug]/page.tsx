@@ -51,6 +51,14 @@ export default async function PlantPage({ params }: PlantPageProps) {
         />
       )}
 
+      <div className="-mx-6 my-4 overflow-hidden">
+        <img
+          src="/illustrations/ornament-plant-page-2.png"
+          alt="Ornamento"
+          className="w-full object-cover"
+        />
+      </div>
+
       <p className="text-gray-600 mb-2">
         Categoría: {plant.category}
       </p>

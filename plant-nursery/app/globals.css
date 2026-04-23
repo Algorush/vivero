@@ -83,6 +83,57 @@ h6 {
   border-bottom: 2px solid rgba(108, 62, 43, 0.45);
 }
 
+.mapuche-ornament-band {
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
+  margin-bottom: 2rem;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.mapuche-ornament-mobile {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.mapuche-ornament-desktop {
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 1.25rem;
+  flex-wrap: nowrap;
+  padding-inline: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .mapuche-ornament-side {
+    width: auto;
+    max-width: 11rem;
+    max-height: 3.25rem;
+    height: auto;
+    flex: 0 0 auto;
+    object-fit: contain;
+  }
+
+  .mapuche-ornament-center {
+    width: 500px;
+    max-width: 500px;
+    height: auto;
+    flex: 0 0 auto;
+    margin-inline: auto;
+    object-fit: contain;
+  }
+}
+
+@media (min-width: 1280px) {
+  .mapuche-ornament-side {
+    max-width: 12rem;
+  }
+}
+
 .mapuche-paper-surface {
   background: linear-gradient(180deg, rgba(255, 249, 240, 0.96), rgba(248, 238, 222, 0.94));
   border: 1px solid rgba(139, 79, 53, 0.18);

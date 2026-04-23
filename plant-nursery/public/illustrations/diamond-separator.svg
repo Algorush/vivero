@@ -1,0 +1,30 @@
+<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#d8c0a0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b4f35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2f5f4f;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="120" fill="#16352f" opacity="0.6"/>
+  
+  <!-- Repeating diamonds -->
+  <g id="diamondPattern">
+    <polygon points="40,20 60,60 40,100 20,60" fill="none" stroke="url(#diamondGradient)" stroke-width="2" opacity="0.8"/>
+    <polygon points="40,20 60,60 40,100 20,60" fill="url(#diamondGradient)" opacity="0.15"/>
+  </g>
+  
+  <!-- Repeat the pattern -->
+  <use href="#diamondPattern" x="0" y="0"/>
+  <use href="#diamondPattern" x="120" y="0"/>
+  <use href="#diamondPattern" x="240" y="0"/>
+  <use href="#diamondPattern" x="360" y="0"/>
+  <use href="#diamondPattern" x="480" y="0"/>
+  <use href="#diamondPattern" x="600" y="0"/>
+  <use href="#diamondPattern" x="720" y="0"/>
+  <use href="#diamondPattern" x="840" y="0"/>
+  <use href="#diamondPattern" x="960" y="0"/>
+  <use href="#diamondPattern" x="1080" y="0"/>
+</svg>

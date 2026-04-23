@@ -117,12 +117,28 @@ plantas nativas y exóticas
         </div>
       </section>
 
-      <div className="relative left-1/2 -mx-[50vw] mb-8 h-24 w-screen overflow-hidden">
-        <img
-          src="/illustrations/diamond-separator.svg"
-          alt="Diamond separator"
-          className="h-full w-full object-cover"
-        />
+      <div className="mapuche-ornament-band">
+        <div className="lg:hidden">
+          <Image
+            src="/illustrations/ornament-mapuche1.png"
+            alt="Ornamento mapuche"
+            width={1920}
+            height={120}
+            unoptimized
+            className="mapuche-ornament-mobile"
+          />
+        </div>
+
+        <div className="hidden lg:flex mapuche-ornament-desktop">
+          <Image
+            src="/illustrations/ornament-mapuche1.png"
+            alt="Ornamento mapuche"
+            width={1200}
+            height={120}
+            unoptimized
+            className="mapuche-ornament-center"
+          />
+        </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8">

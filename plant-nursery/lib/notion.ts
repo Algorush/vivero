@@ -98,7 +98,7 @@ type NurserySection =
 
 // --- Constants ---------------------------------------------------------------
 const DEFAULT_PAGE_SIZE = 12;
-const CACHE_REVALIDATE_SECONDS = 60;
+const CACHE_REVALIDATE_SECONDS = 300;
 const NURSERY_PAGE_RAW_ID = "Vivero-Kar-lemu-plantas-nativas-y-ex-ticas-33a014ba6d4b8024b8caf02162fc9492";
 export const PLANTS_REVALIDATE_TAG = "plants";
 
@@ -291,13 +291,34 @@ async function queryPlants(params?: {
 
   if (params?.slug) {
     body.filter = {
-      property: "Slug",
-      rich_text: { equals: params.slug },
+      and: [
+        {
+          property: "Slug",
+          rich_text: { equals: params.slug },
+        },
+        {
+          property: "Available",
+          checkbox: { equals: true },
+        },
+      ],
     };
   } else if (params?.category) {
     body.filter = {
-      property: "Category",
-      select: { equals: params.category },
+      and: [
+        {
+          property: "Category",
+          select: { equals: params.category },
+        },
+        {
+          property: "Available",
+          checkbox: { equals: true },
+        },
+      ],
+    };
+  } else {
+    body.filter = {
+      property: "Available",
+      checkbox: { equals: true },
     };
   }
 
