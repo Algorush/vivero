@@ -28,7 +28,12 @@ type NotionPage = {
     Price?: { number?: number | null };
     Amount?: { number?: number | null };
     Available?: { checkbox?: boolean };
-    Image?: { files?: Array<{ file?: { url?: string } }> };
+    Image?: {
+      files?: Array<{
+        file?: { url?: string };
+        external?: { url?: string };
+      }>;
+    };
   };
 };
 
@@ -165,6 +170,57 @@ function textArrayToPlain(items?: Array<{ plain_text?: string }>): string {
   return (items ?? []).map((item) => item.plain_text ?? "").join("").trim();
 }
 
+function slugifyFileName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .trim();
+}
+
+function createUrlHash(value: string): string {
+  let hash = 5381;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash.toString(36);
+}
+
+function getPlantImageBaseName(page: NotionPage): string {
+  const slug = textArrayToPlain(page.properties.Slug?.rich_text);
+  const title = textArrayToPlain(page.properties.Title?.title);
+  const preferredName = slugifyFileName(slug || title);
+
+  if (preferredName) {
+    return preferredName;
+  }
+
+  return "plant";
+}
+
+function buildLocalPlantImagePath(
+  page: NotionPage,
+  _sourceUrl: string,
+  index: number
+): string {
+  const baseName = getPlantImageBaseName(page);
+
+  return `/notion-images/plants/${baseName}-${index + 1}.jpg`;
+}
+
+function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): string {
+  const hash = createUrlHash(url);
+  return `/notion-images/${bucket}/${hash}.jpg`;
+}
+
+function getNotionFileUrl(file: { file?: { url?: string }; external?: { url?: string } }): string {
+  return file.file?.url ?? file.external?.url ?? "";
+}
+
 // Returns heading text from heading_1/2/3 blocks.
 function getHeadingText(block: NotionBlock): string {
   if (block.type === "heading_1") {
@@ -248,9 +304,13 @@ function getImageFromBlock(block: NotionBlock): string {
 
 // Maps Notion database page to internal Plant model.
 function mapPlant(page: NotionPage): Plant {
-  const allImages = (page.properties.Image?.files ?? [])
-    .map((f) => f.file?.url ?? "")
+  const sourceImages = (page.properties.Image?.files ?? [])
+    .map((file) => getNotionFileUrl(file))
     .filter(Boolean);
+
+  const allImages = sourceImages.map((url, index) =>
+    buildLocalPlantImagePath(page, url, index)
+  );
 
   return {
     id: page.id,
@@ -530,7 +590,10 @@ const getNurseryProfileCached = unstable_cache(
       }
 
       if (currentSection === "image" && !profile.image) {
-        profile.image = getImageFromBlock(block);
+        const imageUrl = getImageFromBlock(block);
+        if (imageUrl) {
+          profile.image = buildLocalNotionImagePath(imageUrl, "nursery");
+        }
         continue;
       }
 
@@ -566,9 +629,13 @@ const getNurseryProfileCached = unstable_cache(
     }
 
     if (!profile.image) {
-      profile.image = blocks
+      const fallbackImageUrl = blocks
         .map(getImageFromBlock)
         .find(Boolean) ?? "";
+
+      profile.image = fallbackImageUrl
+        ? buildLocalNotionImagePath(fallbackImageUrl, "nursery")
+        : "";
     }
 
     return {

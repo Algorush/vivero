@@ -1,0 +1,36 @@
+Title,slug,Description,Category,Suelo,Exposicion,Riego,Tamano,Florece,Fruta,Cuidados
+Abelia,abelia,Arbusto ornamental con flores pequeñas y fragantes.,Arbusto,"• Bien drenado
+• Fértil, ligeramente ácido o neutro","• Sol a sol parcial","• Moderado
+• Mantener humedad ligera
+• Resiste sequía leve","• Altura: 1–2 m
+• Ancho: 1–2 m","Primavera – verano
+Floración prolongada","No","Poda ligera y riego moderado. Muy adaptable."
+Azalea,azalea,Arbusto de floración vistosa ideal para sombra.,Arbusto,"• Suelo ácido
+• Rico en materia orgánica","• Sombra parcial","• Frecuente
+• Mantener húmedo
+• No tolera sequía","• Altura: 1–2 m","Primavera","No","Mantener suelo ácido y húmedo. Evitar sol fuerte."
+Aucuba,aucuba,Arbusto resistente con hojas decorativas.,Arbusto,"• Bien drenado
+• Tolera suelos pobres","• Sombra","• Moderado
+• Tolera sequía","• Altura: 1–3 m","Primavera","No","Muy resistente. Ideal para sombra profunda."
+Acer japonicum,acer-japonicum,Árbol ornamental con hojas rojas.,Arbol,"• Fértil y húmedo","• Sombra parcial","• Moderado
+• Mantener humedad","• Altura: 3–6 m","Otoño","No","Proteger del sol fuerte y viento."
+Berberis,berberis,Arbusto espinoso decorativo.,Arbusto,"• Bien drenado","• Sol","• Bajo
+• Muy resistente","• Altura: 1–3 m","Primavera","Sí","Ideal para cercos. Muy resistente."
+Boj verde,buxus-verde,Arbusto clásico para cercos.,Arbusto,"• Bien drenado","• Sol parcial","• Bajo","• Altura: 1–2 m","No significativo","No","Requiere poda para forma."
+Camelia,camelia,Arbusto elegante con flores grandes.,Arbusto,"• Suelo ácido","• Sombra parcial","• Frecuente
+• Mantener húmedo","• Altura: 2–4 m","Invierno – primavera","No","Sensibles al sol directo. Requieren suelo ácido."
+Cedrón,cedron,Planta aromática para infusiones.,Medicinal,"• Bien drenado","• Sol","• Moderado","• Altura: 1–2 m","Verano","No","Podar regularmente para estimular crecimiento."
+Dafne,dafne,Arbusto con flores fragantes.,Arbusto,"• Bien drenado","• Sombra parcial","• Moderado
+• Sensible al exceso","• Altura: 1–1.5 m","Invierno","No","Evitar trasplantes. Planta delicada."
+Erica,erica,Arbusto pequeño con flores.,Arbusto,"• Ácido
+• Arenoso","• Sol","• Moderado","• Altura: 0.5–1 m","Invierno – primavera","No","Necesita suelo ácido constante."
+Fucsia,fucsia,Planta ornamental con flores colgantes.,Flor,"• Fértil y húmedo","• Sombra parcial","• Frecuente","• Altura: 0.5–1.5 m","Primavera – verano","No","Riego frecuente y sombra."
+Grevillea,grevillea,Arbusto exótico resistente.,Arbusto,"• Muy bien drenado","• Sol","• Bajo","• Altura: 2–5 m","Primavera – verano","No","No tolera exceso de agua."
+Hortensia azul,hortensia-azul,Arbusto con flores grandes.,Flor,"• Ácido y húmedo","• Sombra parcial","• Frecuente","• Altura: 1–2 m","Verano","No","Alta necesidad de agua."
+Jazmín,jazmin,Planta trepadora fragante.,Flor,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 2–5 m","Primavera – verano","No","Necesita soporte para trepar."
+Laurel comida,laurel,Árbol aromático culinario.,Medicinal,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 3–10 m","Primavera","Sí","Muy resistente. Poda opcional."
+Romero,romero,Hierba aromática resistente.,Medicinal,"• Seco y bien drenado","• Sol","• Bajo","• Altura: 0.5–1.5 m","Primavera","No","Evitar exceso de agua."
+Roble americano,roble-americano,Árbol grande de sombra.,Arbol,"• Fértil","• Sol","• Moderado","• Altura: 10–25 m","Primavera","Sí","Necesita espacio amplio."
+Rododendro Elizabeth,rododendro-elizabeth,Arbusto ornamental de flor.,Flor,"• Ácido","• Sombra parcial","• Frecuente","• Altura: 1–2 m","Primavera","No","Suelo ácido obligatorio."
+Murta variegata,murta-variegata,Arbusto con frutos.,Arbusto,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 1–3 m","Verano","Sí","Resistente y decorativa."
+Spirea thunbergii,spirea-thunbergii,Arbusto con flores blancas.,Arbusto,"• Bien drenado","• Sol","• Moderado","• Altura: 1–2 m","Primavera","No","Fácil mantenimiento."

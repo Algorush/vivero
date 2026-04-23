@@ -6,13 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:notion-images": "node scripts/download-notion-images.mjs",
+    "import:notion-plants": "node scripts/import-plants-from-csv.mjs"
   },
   "dependencies": {
     "@notionhq/client": "^5.16.0",
     "next": "16.2.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
