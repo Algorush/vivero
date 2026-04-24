@@ -163,37 +163,39 @@ export default function PlantCatalog({
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <button
-            type="button"
-            onClick={() => void applyFilters("", searchInput)}
-            disabled={isFilterLoading}
-            className={`mapuche-chip shrink-0 ${
-              !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
-            } disabled:cursor-wait disabled:opacity-70`}
-            aria-pressed={!activeCategory}
-          >
-            Todas
-          </button>
+        <div className="pt-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <button
+              type="button"
+              onClick={() => void applyFilters("", searchInput)}
+              disabled={isFilterLoading}
+              className={`mapuche-chip shrink-0 ${
+                !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
+              } disabled:cursor-wait disabled:opacity-70`}
+              aria-pressed={!activeCategory}
+            >
+              Todas
+            </button>
 
-          {categories.map((category) => {
-            const isActive = normalize(activeCategory) === normalize(category);
+            {categories.map((category) => {
+              const isActive = normalize(activeCategory) === normalize(category);
 
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => void applyFilters(category, searchInput)}
-                disabled={isFilterLoading}
-                className={`mapuche-chip shrink-0 ${
-                  isActive ? "mapuche-chip-active" : "mapuche-chip-idle"
-                } disabled:cursor-wait disabled:opacity-70`}
-                aria-pressed={isActive}
-              >
-                {category}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => void applyFilters(category, searchInput)}
+                  disabled={isFilterLoading}
+                  className={`mapuche-chip shrink-0 ${
+                    isActive ? "mapuche-chip-active" : "mapuche-chip-idle"
+                  } disabled:cursor-wait disabled:opacity-70`}
+                  aria-pressed={isActive}
+                >
+                  {category}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

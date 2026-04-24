@@ -190,6 +190,15 @@ function createUrlHash(value: string): string {
   return hash.toString(36);
 }
 
+function normalizeUrlForStableHash(value: string): string {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+  } catch {
+    return value.split("?")[0].split("#")[0] ?? value;
+  }
+}
+
 function getPlantImageBaseName(page: NotionPage): string {
   const slug = textArrayToPlain(page.properties.Slug?.rich_text);
   const title = textArrayToPlain(page.properties.Title?.title);
@@ -213,7 +222,11 @@ function buildLocalPlantImagePath(
 }
 
 function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): string {
-  const hash = createUrlHash(url);
+  if (bucket === "nursery") {
+    return "/notion-images/nursery/hero.jpg";
+  }
+
+  const hash = createUrlHash(normalizeUrlForStableHash(url));
   return `/notion-images/${bucket}/${hash}.jpg`;
 }
 

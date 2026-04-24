@@ -1,7 +1,45 @@
 import { Client } from "@notionhq/client";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+
+function loadEnvFile(fileName) {
+  const fullPath = path.resolve(process.cwd(), fileName);
+  if (!existsSync(fullPath)) {
+    return;
+  }
+
+  const content = readFileSync(fullPath, "utf8");
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(".env.local");
+loadEnvFile(".env");
 
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
@@ -59,6 +97,15 @@ function createUrlHash(value) {
   return hash.toString(36);
 }
 
+function normalizeUrlForStableHash(value) {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+  } catch {
+    return (value.split("?")[0] || "").split("#")[0] || value;
+  }
+}
+
 function getPlantImageBaseName(page) {
   const slug = textArrayToPlain(page?.properties?.Slug?.rich_text);
   const title = textArrayToPlain(page?.properties?.Title?.title);
@@ -79,8 +126,7 @@ function buildLocalPlantImagePath(page, imageUrl, index) {
 }
 
 function buildLocalNotionImagePath(url, bucket) {
-  void url;
-  const hash = createUrlHash(url);
+  const hash = createUrlHash(normalizeUrlForStableHash(url));
   return `/notion-images/${bucket}/${hash}.jpg`;
 }
 
