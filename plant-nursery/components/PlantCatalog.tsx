@@ -146,10 +146,10 @@ export default function PlantCatalog({
 
   return (
     <>
-      <div className="mapuche-paper-surface sticky top-2 z-20 mb-8 w-full max-w-full px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:static md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mapuche-paper-surface sticky top-2 z-20 -mx-2 mb-8 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:static md:mx-0 md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
-          <p className="text-xs text-zinc-500 sm:text-right">{categories.length + 1} filtros disponibles</p>
+          <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
         </div>
 
         <div className="mb-3">

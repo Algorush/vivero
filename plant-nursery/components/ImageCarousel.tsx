@@ -66,6 +66,7 @@ export default function ImageCarousel({
   return (
     <div
       className={`relative select-none ${isFill ? "w-full h-full" : "w-full"}`}
+      style={{ touchAction: "pan-y" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
