@@ -170,14 +170,15 @@ export default function PlantInfiniteGrid({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <div className="grid w-full max-w-full grid-cols-1 gap-6 overflow-x-hidden sm:grid-cols-2 md:grid-cols-3">
         {plants.map((plant, index) => (
-          <PlantCard
-            key={plant.id}
-            plant={plant}
-            priority={index === 0}
-            animationDelayMs={(index % 12) * 45}
-          />
+          <div key={plant.id} className="min-w-0">
+            <PlantCard
+              plant={plant}
+              priority={index === 0}
+              animationDelayMs={(index % 12) * 45}
+            />
+          </div>
         ))}
       </div>
 

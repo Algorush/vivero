@@ -14,9 +14,9 @@ export default function PlantCard({
   animationDelayMs = 0,
 }: PlantCardProps) {
   return (
-    <Link href={`/plants/${plant.slug}`}>
+    <Link href={`/plants/${plant.slug}`} className="block min-w-0">
       <div
-        className="animate-card-in border rounded-2xl bg-white p-4 shadow transition hover:shadow-lg motion-reduce:animate-none"
+        className="animate-card-in min-w-0 overflow-hidden rounded-2xl border bg-white p-4 shadow transition hover:shadow-lg motion-reduce:animate-none"
         style={{ animationDelay: `${animationDelayMs}ms` }}
       >
         {plant.images?.length > 0 && (
@@ -32,9 +32,9 @@ export default function PlantCard({
           </div>
         )}
 
-        <h2 className="text-lg font-semibold">{plant.name}</h2>
+        <h2 className="break-words text-lg font-semibold">{plant.name}</h2>
 
-        <p className="text-sm text-gray-500">{plant.category}</p>
+        <p className="break-words text-sm text-gray-500">{plant.category}</p>
 
         {plant.price > 0 && (
           <p className="text-green-600 font-bold mt-2">

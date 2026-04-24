@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/notion";
 import PlantCatalog from "@/components/PlantCatalog";
+import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 
 export const revalidate = 60;
 
@@ -46,7 +47,10 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <>
-      <section className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen min-h-[100svh] overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]">
+      <section
+        id="home-hero"
+        className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen min-h-[100svh] overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]"
+      >
         {nurseryProfile.image && (
           <Image
             src={nurseryProfile.image}
@@ -61,8 +65,8 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <div className="absolute inset-0 bg-gradient-to-b from-[#16352f]/45 via-[#2f5f4f]/30 to-[#16352f]/50" />
 
-        <div className="relative z-10 flex min-h-[100svh] items-start p-4 pt-8 sm:p-6 sm:pt-10 md:items-end md:p-10">
-          <div className="mapuche-hero-overlay w-full max-w-3xl rounded-3xl p-5 backdrop-blur-md sm:p-6 md:p-8">
+        <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl items-start px-4 pt-8 sm:px-6 sm:pt-10 md:items-end md:px-10 md:pb-10 md:pt-10">
+          <div className="mapuche-hero-overlay w-full rounded-3xl p-5 backdrop-blur-md sm:p-6 md:p-8">
             <h1 className="text-3xl font-bold leading-tight text-[#f8f0e4] md:text-5xl">
               Vivero &quot;karū-lemu&quot; -
 plantas nativas y exóticas
@@ -141,7 +145,7 @@ plantas nativas y exóticas
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-8 sm:px-6 md:px-10">
         <PlantCatalog
           categories={categories}
           initialCategory={activeCategory}
@@ -149,6 +153,8 @@ plantas nativas y exóticas
           initialPage={plantsPage}
         />
       </div>
+
+      {waHref && <FloatingWhatsAppButton href={waHref} />}
     </>
   );
 }
