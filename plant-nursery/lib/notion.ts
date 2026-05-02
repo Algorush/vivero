@@ -1,4 +1,6 @@
 import { Client } from "@notionhq/client";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { unstable_cache } from "next/cache";
 import type { Plant } from "@/types/plant";
 
@@ -106,6 +108,7 @@ const DEFAULT_PAGE_SIZE = 12;
 const CACHE_REVALIDATE_SECONDS = 300;
 const NURSERY_PAGE_RAW_ID = "Vivero-Kar-lemu-plantas-nativas-y-ex-ticas-33a014ba6d4b8024b8caf02162fc9492";
 export const PLANTS_REVALIDATE_TAG = "plants";
+const LOCAL_IMAGE_EXTENSIONS = [".webp", ".jpg", ".jpeg", ".png"];
 
 // --- Small helpers -----------------------------------------------------------
 // Resolves the Notion database ID from env vars.
@@ -211,6 +214,23 @@ function getPlantImageBaseName(page: NotionPage): string {
   return "plant";
 }
 
+function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string {
+  for (const extension of LOCAL_IMAGE_EXTENSIONS) {
+    const publicPath = `${basePublicPathWithoutExt}${extension}`;
+    const absolutePath = path.resolve(
+      process.cwd(),
+      "public",
+      publicPath.replace(/^\//, "")
+    );
+
+    if (existsSync(absolutePath)) {
+      return publicPath;
+    }
+  }
+
+  return `${basePublicPathWithoutExt}.jpg`;
+}
+
 function buildLocalPlantImagePath(
   page: NotionPage,
   _sourceUrl: string,
@@ -218,16 +238,16 @@ function buildLocalPlantImagePath(
 ): string {
   const baseName = getPlantImageBaseName(page);
 
-  return `/notion-images/plants/${baseName}-${index + 1}.jpg`;
+  return resolveExistingLocalImagePath(`/notion-images/plants/${baseName}-${index + 1}`);
 }
 
 function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): string {
   if (bucket === "nursery") {
-    return "/notion-images/nursery/hero.jpg";
+    return resolveExistingLocalImagePath("/notion-images/nursery/hero");
   }
 
   const hash = createUrlHash(normalizeUrlForStableHash(url));
-  return `/notion-images/${bucket}/${hash}.jpg`;
+  return resolveExistingLocalImagePath(`/notion-images/${bucket}/${hash}`);
 }
 
 function getNotionFileUrl(file: { file?: { url?: string }; external?: { url?: string } }): string {
@@ -321,9 +341,21 @@ function mapPlant(page: NotionPage): Plant {
     .map((file) => getNotionFileUrl(file))
     .filter(Boolean);
 
-  const allImages = sourceImages.map((url, index) =>
-    buildLocalPlantImagePath(page, url, index)
-  );
+  let allImages: string[] = [];
+  
+  // If Notion has images, use them
+  if (sourceImages.length > 0) {
+    allImages = sourceImages.map((url, index) =>
+      buildLocalPlantImagePath(page, url, index)
+    );
+  } else {
+    // If Notion has no images, generate local paths for files that might exist manually
+    // Check indices 1-10 for locally placed image files
+    const baseName = getPlantImageBaseName(page);
+    for (let i = 1; i <= 10; i++) {
+      allImages.push(resolveExistingLocalImagePath(`/notion-images/plants/${baseName}-${i}`));
+    }
+  }
 
   return {
     id: page.id,

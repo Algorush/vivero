@@ -66,7 +66,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-[#16352f]/45 via-[#2f5f4f]/30 to-[#16352f]/50" />
 
         <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl items-end px-4 pb-8 sm:px-6 sm:pb-10 md:px-10 md:pb-10 md:pt-10">
-          <div className="mapuche-hero-overlay w-full rounded-3xl p-5 backdrop-blur-md sm:p-6 md:p-8">
+          <div className="mapuche-hero-overlay w-full rounded-3xl p-5 backdrop-blur-sm sm:p-6 md:p-8">
             <h1 className="text-3xl font-bold leading-tight text-[#f8f0e4] md:text-5xl">
               Vivero &quot;karū-lemu&quot; -
 plantas nativas y exóticas
@@ -145,7 +145,7 @@ plantas nativas y exóticas
         </div>
       </div>
 
-      <div className="mx-auto w-screen px-4 py-8">
+      <div className="mx-auto w-full max-w-7xl px-4 py-8">
         <PlantCatalog
           categories={categories}
           initialCategory={activeCategory}

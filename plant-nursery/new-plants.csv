@@ -1,36 +1,417 @@
-Title,slug,Description,Category,Suelo,Exposicion,Riego,Tamano,Florece,Fruta,Cuidados
-Abelia,abelia,Arbusto ornamental con flores pequeñas y fragantes.,Arbusto,"• Bien drenado
-• Fértil, ligeramente ácido o neutro","• Sol a sol parcial","• Moderado
+slug,Title,Cientifico,Description,Suelo,Exposicion,Riego,Tamano,Florece,Fruta,Utilizacion,Propagacion,Frase
+"abelia","Abelia","Abelia × grandiflora","Arbusto ornamental muy apreciado por su floración prolongada, su fácil mantenimiento y su aspecto elegante durante gran parte del año. Produce pequeñas flores aromáticas que atraen abejas y mariposas, aportando vida al jardín. Ideal para bordes, cercos bajos, macizos y jardines de bajo mantenimiento. Su follaje puede tomar tonos rojizos en otoño e invierno.","• Bien drenado
+• Tolera distintos tipos de suelo
+• Prefiere sustrato fértil y aireado
+• Evitar encharcamiento prolongado","• Sol pleno a semisombra
+• Florece mejor con buena luz
+• Tolera algo de sombra","• Moderado
+• Regar regularmente en verano
+• Tolera sequía ligera una vez establecida
+• Evitar exceso de agua","• Altura: 1–2 m
+• Ancho: 1–2 m
+• Arbusto compacto y redondeado
+• Crecimiento moderado","Octubre – abril
+Floración muy prolongada y abundante
+Flores blancas o rosadas ligeramente aromáticas","No relevante","• Ornamental para jardines y bordes
+• Cercos bajos decorativos
+• Atracción de polinizadores
+• Jardines de bajo mantenimiento","• Esquejes (muy fácil)
+• También por división","Floración prolongada y elegante con muy poco mantenimiento"
+
+"azalea","Azalea","Rhododendron simsii","Arbusto ornamental famoso por su impresionante floración primaveral. Sus flores cubren casi completamente la planta, creando un efecto visual muy llamativo. Ideal para jardines húmedos y sombreados. Muy utilizada en paisajismo japonés y jardines ornamentales. Requiere ciertas condiciones de suelo, pero recompensa con una de las floraciones más espectaculares del jardín.","• Ácido y rico en materia orgánica
+• Muy bien drenado
+• Mantener humedad constante
+• No tolera suelos calcáreos","• Sombra parcial
+• Luz suave o filtrada
+• Evitar sol fuerte de tarde","• Moderado a alto
+• Mantener sustrato húmedo
+• No dejar secar completamente
+• Sensible a sequía extrema","• Altura: 0.8–2 m
+• Arbusto compacto y muy ornamental
+• Crecimiento moderado","Septiembre – noviembre
+Floración extremadamente abundante
+Gran variedad de colores intensos","No relevante","• Ornamental premium
+• Jardines japoneses
+• Macizos florales
+• Jardines de sombra","• Esquejes
+• Injertos en variedades especiales","Una de las floraciones más espectaculares para jardines sombreados"
+
+"aucuba","Aucuba","Aucuba japonica","Arbusto siempreverde muy resistente y perfecto para zonas de sombra donde muchas otras plantas no prosperan. Destaca por su follaje brillante y decorativo, especialmente en variedades variegadas. Es excelente para patios interiores, jardines húmedos y espacios con poca luz. Requiere muy poco mantenimiento.","• Fértil y bien drenado
+• Tolera distintos tipos de suelo
+• Prefiere humedad moderada","• Sombra parcial a sombra
+• Excelente para zonas con poca luz
+• Evitar sol fuerte directo","• Moderado
 • Mantener humedad ligera
-• Resiste sequía leve","• Altura: 1–2 m
-• Ancho: 1–2 m","Primavera – verano
-Floración prolongada","No","Poda ligera y riego moderado. Muy adaptable."
-Azalea,azalea,Arbusto de floración vistosa ideal para sombra.,Arbusto,"• Suelo ácido
-• Rico en materia orgánica","• Sombra parcial","• Frecuente
-• Mantener húmedo
-• No tolera sequía","• Altura: 1–2 m","Primavera","No","Mantener suelo ácido y húmedo. Evitar sol fuerte."
-Aucuba,aucuba,Arbusto resistente con hojas decorativas.,Arbusto,"• Bien drenado
-• Tolera suelos pobres","• Sombra","• Moderado
-• Tolera sequía","• Altura: 1–3 m","Primavera","No","Muy resistente. Ideal para sombra profunda."
-Acer japonicum,acer-japonicum,Árbol ornamental con hojas rojas.,Arbol,"• Fértil y húmedo","• Sombra parcial","• Moderado
-• Mantener humedad","• Altura: 3–6 m","Otoño","No","Proteger del sol fuerte y viento."
-Berberis,berberis,Arbusto espinoso decorativo.,Arbusto,"• Bien drenado","• Sol","• Bajo
-• Muy resistente","• Altura: 1–3 m","Primavera","Sí","Ideal para cercos. Muy resistente."
-Boj verde,buxus-verde,Arbusto clásico para cercos.,Arbusto,"• Bien drenado","• Sol parcial","• Bajo","• Altura: 1–2 m","No significativo","No","Requiere poda para forma."
-Camelia,camelia,Arbusto elegante con flores grandes.,Arbusto,"• Suelo ácido","• Sombra parcial","• Frecuente
-• Mantener húmedo","• Altura: 2–4 m","Invierno – primavera","No","Sensibles al sol directo. Requieren suelo ácido."
-Cedrón,cedron,Planta aromática para infusiones.,Medicinal,"• Bien drenado","• Sol","• Moderado","• Altura: 1–2 m","Verano","No","Podar regularmente para estimular crecimiento."
-Dafne,dafne,Arbusto con flores fragantes.,Arbusto,"• Bien drenado","• Sombra parcial","• Moderado
-• Sensible al exceso","• Altura: 1–1.5 m","Invierno","No","Evitar trasplantes. Planta delicada."
-Erica,erica,Arbusto pequeño con flores.,Arbusto,"• Ácido
-• Arenoso","• Sol","• Moderado","• Altura: 0.5–1 m","Invierno – primavera","No","Necesita suelo ácido constante."
-Fucsia,fucsia,Planta ornamental con flores colgantes.,Flor,"• Fértil y húmedo","• Sombra parcial","• Frecuente","• Altura: 0.5–1.5 m","Primavera – verano","No","Riego frecuente y sombra."
-Grevillea,grevillea,Arbusto exótico resistente.,Arbusto,"• Muy bien drenado","• Sol","• Bajo","• Altura: 2–5 m","Primavera – verano","No","No tolera exceso de agua."
-Hortensia azul,hortensia-azul,Arbusto con flores grandes.,Flor,"• Ácido y húmedo","• Sombra parcial","• Frecuente","• Altura: 1–2 m","Verano","No","Alta necesidad de agua."
-Jazmín,jazmin,Planta trepadora fragante.,Flor,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 2–5 m","Primavera – verano","No","Necesita soporte para trepar."
-Laurel comida,laurel,Árbol aromático culinario.,Medicinal,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 3–10 m","Primavera","Sí","Muy resistente. Poda opcional."
-Romero,romero,Hierba aromática resistente.,Medicinal,"• Seco y bien drenado","• Sol","• Bajo","• Altura: 0.5–1.5 m","Primavera","No","Evitar exceso de agua."
-Roble americano,roble-americano,Árbol grande de sombra.,Arbol,"• Fértil","• Sol","• Moderado","• Altura: 10–25 m","Primavera","Sí","Necesita espacio amplio."
-Rododendro Elizabeth,rododendro-elizabeth,Arbusto ornamental de flor.,Flor,"• Ácido","• Sombra parcial","• Frecuente","• Altura: 1–2 m","Primavera","No","Suelo ácido obligatorio."
-Murta variegata,murta-variegata,Arbusto con frutos.,Arbusto,"• Bien drenado","• Sol parcial","• Moderado","• Altura: 1–3 m","Verano","Sí","Resistente y decorativa."
-Spirea thunbergii,spirea-thunbergii,Arbusto con flores blancas.,Arbusto,"• Bien drenado","• Sol","• Moderado","• Altura: 1–2 m","Primavera","No","Fácil mantenimiento."
+• Tolera periodos cortos de sequía","• Altura: 1–3 m
+• Arbusto denso y compacto
+• Crecimiento lento a moderado","Septiembre – noviembre
+Floración pequeña y discreta","Sí (bayas rojas decorativas en plantas femeninas)
+• Muy ornamentales","• Jardines de sombra
+• Patios interiores
+• Follaje decorativo todo el año","• Esquejes (muy recomendado)","Perfecta para dar vida y color a jardines con poca luz"
+
+"acer-japones","Acer japonés","Acer palmatum","Árbol ornamental de gran valor paisajístico, famoso por la belleza y delicadeza de sus hojas. Sus colores cambian espectacularmente en otoño, pasando por tonos rojos, naranjos y amarillos intensos. Ideal para jardines elegantes, patios y espacios contemplativos. Necesita cierta protección del sol fuerte y del viento.","• Fértil y bien drenado
+• Ligera acidez ideal
+• Rico en materia orgánica
+• Evitar suelos secos","• Semisombra
+• Sol suave de mañana
+• Proteger del sol fuerte de tarde","• Moderado
+• Mantener humedad regular
+• Sensible a sequía y calor extremo","• Altura: 2–6 m
+• Forma elegante y ramificada
+• Crecimiento lento a moderado","Septiembre – octubre
+Floración discreta","Sí (semillas aladas decorativas)","• Jardines japoneses
+• Ornamental premium
+• Macetas grandes y patios","• Injertos
+• Semillas (más lento)","Colores otoñales espectaculares para jardines elegantes"
+
+"berberis","Berberis","Berberis thunbergii","Arbusto muy resistente y decorativo, valorado por su follaje colorido y su capacidad de formar cercos naturales defensivos gracias a sus espinas. Algunas variedades presentan hojas rojas, púrpuras o amarillas muy llamativas. Tolera bien poda, frío y sequía.","• Bien drenado
+• Tolera suelos pobres
+• Muy adaptable","• Sol pleno
+• Mejor coloración con buena luz","• Bajo a moderado
+• Bastante resistente a sequía","• Altura: 1–2 m
+• Arbusto compacto y espinoso
+• Crecimiento moderado","Septiembre – noviembre
+Floración pequeña amarilla","Sí (bayas rojas decorativas)
+• Persisten en invierno","• Cercos vivos
+• Seguridad natural
+• Ornamental por follaje","• Esquejes
+• Semillas","Resistente, colorido y excelente para cercos decorativos"
+
+"boj-verde","Boj verde","Buxus sempervirens","Arbusto clásico utilizado en jardines formales y diseño ornamental. Muy apreciado para crear cercos bajos, figuras topiarias y estructuras verdes permanentes. Su follaje compacto y siempreverde mantiene el jardín ordenado durante todo el año.","• Bien drenado
+• Fértil y aireado
+• Tolera distintos tipos de suelo","• Sol a semisombra
+• Tolera sombra ligera","• Moderado
+• Evitar exceso de humedad","• Altura: 1–3 m
+• Arbusto muy denso y compacto
+• Crecimiento lento","Primavera
+Floración pequeña y discreta","No relevante","• Topiaria
+• Cercos formales
+• Jardines clásicos","• Esquejes (muy utilizado)","Ideal para cercos elegantes y diseño formal del jardín"
+
+"boj-variegata","Boj variegata","Buxus sempervirens 'Variegata'","Variedad ornamental de boj con hojas verdes bordeadas en tonos crema o amarillos. Mantiene la elegancia clásica del boj tradicional, pero con un aspecto más luminoso y decorativo. Excelente para jardines refinados, bordes y macetas.","• Bien drenado
+• Fértil y aireado","• Sol parcial a semisombra
+• Tolera sombra ligera","• Moderado
+• Evitar exceso de agua","• Altura: 1–2 m
+• Arbusto compacto y ornamental
+• Crecimiento lento","Primavera
+Floración discreta","No relevante","• Bordes decorativos
+• Macetas ornamentales
+• Jardines elegantes","• Esquejes","Follaje elegante y luminoso durante todo el año"
+
+"camelia","Camelia","Camellia japonica","Arbusto ornamental de gran elegancia, famoso por sus grandes flores y su floración en épocas frías cuando pocas plantas están floreciendo. Muy apreciada en jardines clásicos y japoneses. Su follaje brillante y siempreverde mantiene atractivo el jardín durante todo el año. Ideal para patios, entradas y jardines húmedos y protegidos.","• Ácido y rico en materia orgánica
+• Bien drenado pero húmedo
+• Evitar suelos calcáreos
+• Prefiere sustrato fresco","• Sombra parcial
+• Luz suave o filtrada
+• Evitar sol fuerte de tarde","• Moderado
+• Mantener humedad constante
+• No tolera sequía prolongada
+• Evitar encharcamiento","• Altura: 2–4 m
+• Arbusto denso y elegante
+• Crecimiento lento a moderado","Junio – septiembre
+Grandes flores muy ornamentales
+Amplia variedad de colores y formas","No relevante","• Ornamental premium
+• Jardines japoneses
+• Patios y entradas elegantes","• Esquejes
+• Injertos en variedades especiales","Flores elegantes en invierno cuando el jardín más lo necesita"
+
+"cedron","Cedrón","Aloysia citrodora","Planta aromática medicinal muy conocida por su intenso aroma a limón. Sus hojas se utilizan ampliamente en infusiones relajantes y medicina natural. Además de ser útil, aporta un agradable perfume al jardín. Fácil de cultivar y excelente para huertos, macetas y jardines soleados.","• Bien drenado
+• Ligero y fértil
+• Tolera suelos pobres si drenan bien","• Sol pleno
+• Necesita buena luz para crecer vigorosamente","• Moderado
+• Regar más en verano
+• Tolera cierta sequía una vez establecida","• Altura: 1–3 m
+• Arbusto ligero y aromático
+• Crecimiento rápido","Diciembre – marzo
+Flores pequeñas y discretas","No relevante","• Infusiones y medicina natural
+• Jardines aromáticos
+• Huertos y macetas","• Esquejes (muy fácil)
+• Semillas","Intenso aroma a limón ideal para infusiones y jardines aromáticos"
+
+"dafne","Dafne","Daphne odora","Arbusto ornamental muy valorado por el intenso perfume de sus flores. Florece en invierno y comienzos de primavera, llenando el jardín de aroma cuando pocas especies están activas. Ideal cerca de entradas, terrazas o ventanas donde se pueda disfrutar su fragancia.","• Fértil y bien drenado
+• Rico en materia orgánica
+• Sensible a exceso de humedad","• Semisombra
+• Luz suave
+• Evitar calor extremo","• Moderado
+• Mantener humedad ligera
+• Sensible a sequía prolongada","• Altura: 1–1.5 m
+• Arbusto compacto y elegante
+• Crecimiento lento","Junio – septiembre
+Flores muy aromáticas
+Blancas o rosadas","Sí (frutos decorativos)
+• No comestibles","• Ornamental aromático
+• Jardines pequeños
+• Entradas y terrazas","• Esquejes (algo delicado)","Uno de los arbustos más aromáticos para jardines elegantes"
+
+"erica","Erica","Erica spp.","Arbusto compacto de floración abundante, ideal para aportar color durante el invierno y comienzos de primavera. Muy resistente al frío y excelente para jardines de bajo mantenimiento. Sus pequeñas flores atraen abejas y polinizadores.","• Ácido y bien drenado
+• Tolera suelos pobres
+• Prefiere sustrato ligero","• Sol pleno
+• Tolera semisombra ligera","• Bajo a moderado
+• Resistente a sequía moderada","• Altura: 0.5–1.5 m
+• Arbusto compacto y tupido
+• Crecimiento moderado","Junio – octubre
+Floración abundante y prolongada","No relevante","• Cobertura ornamental
+• Jardines de bajo mantenimiento
+• Atracción de polinizadores","• Esquejes","Color y floración incluso en los meses más fríos"
+
+"ellwoodii","Ellwoodii","Chamaecyparis lawsoniana 'Ellwoodii'","Conífera ornamental compacta y elegante, muy utilizada en jardines formales, entradas y macetas grandes. Su follaje azul verdoso aporta textura y estructura durante todo el año. Ideal para quienes buscan una planta decorativa de bajo mantenimiento.","• Bien drenado
+• Prefiere sustrato fértil
+• No tolera exceso de agua","• Sol a semisombra
+• Mejor forma con buena luz","• Moderado
+• Mantener humedad ligera","• Altura: 2–4 m
+• Forma cónica compacta
+• Crecimiento lento a moderado","No ornamental","Sí (pequeños conos decorativos)","• Jardines formales
+• Macetas ornamentales
+• Entradas y terrazas","• Esquejes","Conífera elegante y compacta para jardines sofisticados"
+
+"fuxia","Fucsia","Fuchsia hybrida","Arbusto ornamental muy apreciado por sus flores colgantes de colores intensos. Aporta un aspecto delicado y elegante al jardín y atrae picaflores y polinizadores. Ideal para patios, terrazas y jardines húmedos y sombreados.","• Rico en materia orgánica
+• Húmedo y bien drenado
+• Prefiere sustrato fresco","• Sombra parcial
+• Luz suave
+• Evitar sol fuerte","• Moderado a alto
+• Mantener humedad constante
+• Sensible a calor extremo","• Altura: 1–2 m
+• Arbusto abierto y ornamental
+• Crecimiento rápido","Octubre – marzo
+Floración abundante y prolongada
+Flores colgantes muy decorativas","Sí (pequeñas bayas)
+• Algunas variedades comestibles","• Ornamental
+• Atracción de picaflores
+• Macetas y terrazas","• Esquejes (muy fácil)","Flores colgantes llenas de color que atraen picaflores"
+
+"grevillea","Grevillea","Grevillea robusta","Árbol ornamental de rápido crecimiento con follaje fino y aspecto exótico. Produce flores muy atractivas para aves y polinizadores. Excelente para generar sombra relativamente rápido en jardines amplios y parcelas.","• Bien drenado
+• Tolera suelos pobres
+• Muy resistente una vez establecido","• Sol pleno
+• Necesita espacio y buena luz","• Bajo a moderado
+• Tolera sequía una vez establecido","• Altura: 5–15 m
+• Copa amplia y ligera
+• Crecimiento rápido","Septiembre – noviembre
+Flores naranjas muy llamativas","Sí (vainas decorativas)","• Árbol ornamental
+• Sombra
+• Atracción de aves y polinizadores","• Semillas","Árbol exótico de rápido crecimiento y gran presencia"
+"hortensia-azul","Hortensia azul","Hydrangea macrophylla","Arbusto ornamental extremadamente popular por sus grandes flores azules que destacan durante todo el verano. Ideal para jardines húmedos y sombreados. Su floración abundante aporta un efecto exuberante y elegante. Muy utilizada en jardines del sur de Chile.","• Húmedo y rico en materia orgánica
+• Ácido para mantener color azul
+• Bien drenado","• Sombra parcial
+• Sol suave de mañana
+• Evitar calor fuerte","• Alto
+• Mantener humedad constante
+• Muy sensible a sequía","• Altura: 1–2 m
+• Arbusto redondeado y denso
+• Crecimiento rápido","Diciembre – marzo
+Grandes flores esféricas muy ornamentales","No relevante","• Ornamental premium
+• Jardines húmedos y sombreados
+• Macetas grandes","• Esquejes (muy fácil)","Grandes flores azules que transforman cualquier jardín"
+
+"hortensia-burdeos","Hortensia Burdeos","Hydrangea macrophylla","Variedad ornamental de hortensia muy apreciada por sus intensas flores color burdeos, vino o rosado oscuro. Aporta un aspecto elegante y sofisticado al jardín durante el verano. Ideal para zonas húmedas y semisombreadas, donde desarrolla una floración abundante y prolongada.","• Rico en materia orgánica
+• Húmedo y bien drenado
+• Prefiere suelos ligeramente ácidos
+• No tolera sequía","• Sombra parcial
+• Luz suave de mañana
+• Evitar sol fuerte de tarde","• Alto
+• Mantener humedad constante
+• Regar frecuentemente en verano
+• Sensible al calor extremo","• Altura: 1–2 m
+• Arbusto redondeado y compacto
+• Crecimiento rápido","Diciembre – marzo
+Grandes flores decorativas color burdeos","No relevante","• Ornamental premium
+• Jardines húmedos
+• Macetas grandes y terrazas","• Esquejes (muy fácil)","Floración elegante y sofisticada para jardines llenos de color"
+
+"jazmin","Jazmín","Jasminum officinale","Trepadora ornamental famosa por el intenso perfume de sus flores blancas. Ideal para cubrir muros, pérgolas y cercos, creando espacios aromáticos y románticos. Muy apreciada en terrazas y entradas donde se puede disfrutar su fragancia durante las tardes y noches cálidas.","• Bien drenado
+• Fértil y aireado
+• Tolera distintos tipos de suelo","• Sol pleno a semisombra
+• Florece mejor con buena luz","• Moderado
+• Mantener humedad ligera
+• Tolera cierta sequía una vez establecido","• Trepadora de 3–5 m
+• Crecimiento rápido y flexible","Octubre – marzo
+Flores blancas muy aromáticas","No relevante","• Cubrir pérgolas y cercos
+• Jardines aromáticos
+• Terrazas y entradas","• Esquejes (muy fácil)","Perfume intenso y elegante para transformar cualquier espacio"
+
+"leptospermum-blanco","Leptospermum blanco","Leptospermum scoparium","Arbusto ornamental resistente y muy florífero, ideal para jardines soleados y de bajo mantenimiento. Sus pequeñas flores blancas cubren la planta en primavera, generando un efecto muy decorativo. Excelente opción para jardines costeros y secos.","• Bien drenado
+• Tolera suelos pobres y arenosos
+• Muy resistente","• Sol pleno
+• Necesita buena luz para florecer intensamente","• Bajo a moderado
+• Resistente a sequía una vez establecido","• Altura: 1–3 m
+• Arbusto denso y ramificado
+• Crecimiento moderado","Septiembre – noviembre
+Floración blanca abundante","Sí (cápsulas pequeñas decorativas)","• Ornamental
+• Jardines costeros
+• Atracción de abejas y polinizadores","• Esquejes
+• Semillas","Floración abundante y gran resistencia al sol y la sequía"
+
+"leptospermum-rojo","Leptospermum rojo","Leptospermum scoparium","Variedad ornamental muy atractiva por sus intensas flores rojas o rosadas. Excelente para dar color a jardines soleados con muy poco mantenimiento. Muy resistente al viento, al sol y a la sequía una vez establecida.","• Bien drenado
+• Tolera suelos pobres
+• Prefiere terrenos ligeros","• Sol pleno
+• Requiere buena exposición solar","• Bajo a moderado
+• Muy resistente a sequía","• Altura: 1–3 m
+• Arbusto compacto y florífero
+• Crecimiento moderado","Septiembre – noviembre
+Floración roja abundante y vistosa","Sí (cápsulas pequeñas)","• Ornamental
+• Jardines secos y costeros
+• Atracción de polinizadores","• Esquejes","Flores rojas vibrantes con muy poco mantenimiento"
+
+"laurel-comida","Laurel de cocina","Laurus nobilis","Árbol o arbusto aromático ampliamente utilizado en cocina por sus hojas intensamente perfumadas. Además de su valor culinario, es una planta ornamental elegante y resistente, ideal para huertos, macetas grandes y jardines mediterráneos.","• Bien drenado
+• Tolera suelos pobres
+• Prefiere sustrato fértil pero adaptable","• Sol pleno a semisombra
+• Muy adaptable","• Bajo a moderado
+• Resistente a sequía moderada
+• Evitar exceso de agua","• Altura: 3–8 m
+• Copa densa y aromática
+• Crecimiento lento a moderado","Septiembre – noviembre
+Floración pequeña y discreta","Sí (bayas oscuras decorativas)
+• No se consumen habitualmente","• Cocina y condimentos
+• Jardines aromáticos
+• Cercos y macetas ornamentales","• Esquejes
+• Semillas","Aromático, elegante y siempre útil en la cocina"
+
+"romero","Romero","Salvia rosmarinus","Arbusto aromático mediterráneo muy resistente y fácil de cultivar. Destaca por su intenso aroma, sus flores atractivas para abejas y su excelente tolerancia a la sequía. Ideal para jardines de bajo mantenimiento, huertos, macetas y bordes soleados. Además de su valor ornamental, es ampliamente utilizado en cocina y medicina natural.","• Muy bien drenado
+• Tolera suelos pobres y pedregosos
+• No tolera exceso de humedad
+• Ideal para terrenos secos","• Sol pleno
+• Necesita varias horas de luz directa
+• No funciona bien en sombra","• Bajo
+• Muy resistente a la sequía
+• Regar solo cuando el suelo esté seco
+• Evitar exceso de agua","• Altura: 0.5–1.5 m
+• Arbusto compacto y aromático
+• Crecimiento moderado","Septiembre – marzo
+Floración azul/lila abundante
+Muy atractiva para abejas y polinizadores","No relevante","• Cocina y condimentos
+• Infusiones y medicina natural
+• Jardines mediterráneos
+• Atracción de polinizadores
+• Macetas y bordes ornamentales","• Esquejes (muy fácil)
+• Semillas","Aromático, resistente y perfecto para jardines de bajo mantenimiento"
+
+"roble-americano","Roble americano","Quercus rubra","Árbol caducifolio muy apreciado por su espectacular color rojo otoñal y su gran capacidad de generar sombra. Ideal para parcelas, parques y jardines amplios. Su crecimiento relativamente rápido y su porte majestuoso lo convierten en un árbol protagonista en paisajismo.","• Profundo y fértil
+• Bien drenado
+• Prefiere humedad moderada
+• Tolera frío","• Sol pleno
+• Necesita espacio abierto","• Moderado
+• Riego regular en etapa joven
+• Más resistente una vez establecido","• Altura: 15–25 m
+• Copa amplia y frondosa
+• Crecimiento moderado a rápido","Septiembre – octubre
+Floración discreta","Sí (bellotas)
+• Sin uso ornamental importante","• Árbol de sombra
+• Paisajismo y parques
+• Color otoñal espectacular","• Semillas (bellotas)","Impresionante color rojo otoñal y gran sombra para espacios amplios"
+
+"rododendro-elizabeth","Rododendro Elizabeth","Rhododendron spp.","Arbusto ornamental muy valorado por sus flores abundantes y de colores intensos. Ideal para jardines húmedos y sombreados donde aporta un fuerte impacto visual en primavera. Muy utilizado en paisajismo de estilo inglés y jardines del sur.","• Ácido y rico en materia orgánica
+• Húmedo pero bien drenado
+• No tolera suelos calcáreos","• Sombra parcial
+• Luz filtrada
+• Evitar sol fuerte","• Moderado a alto
+• Mantener humedad constante
+• Sensible a sequía","• Altura: 1–2 m
+• Arbusto compacto y florífero
+• Crecimiento moderado","Septiembre – noviembre
+Floración abundante y muy vistosa","No relevante","• Ornamental premium
+• Jardines húmedos y sombreados
+• Macizos florales","• Esquejes
+• Injertos","Floración espectacular para jardines elegantes y húmedos"
+
+"murta-variegata","Murta variegata","Ugni molinae 'Variegata'","Variedad ornamental de murta con hojas verdes bordeadas en tonos crema claros. Combina el atractivo del follaje decorativo con frutos aromáticos y comestibles. Excelente para jardines pequeños, macetas y bordes decorativos.","• Bien drenado
+• Rico en materia orgánica
+• Prefiere ligera acidez","• Sol parcial a sol suave
+• Tolera semisombra","• Moderado
+• Mantener humedad ligera
+• Evitar sequía extrema","• Altura: 1–1.5 m
+• Arbusto compacto y denso
+• Crecimiento moderado","Octubre – diciembre
+Pequeñas flores blancas aromáticas","Sí (bayas aromáticas)
+• Comestibles y muy fragantes","• Ornamental
+• Jardines pequeños
+• Consumo de frutos
+• Macetas decorativas","• Esquejes
+• Semillas","Follaje decorativo y frutos aromáticos en una planta compacta"
+
+"rododendro-may-day","Rododendro May Day","Rhododendron spp.","Variedad ornamental de rododendro conocida por su abundante floración primaveral y colores suaves y elegantes. Excelente para crear puntos focales en jardines húmedos y sombreados.","• Ácido y fértil
+• Rico en materia orgánica
+• Bien drenado","• Sombra parcial
+• Evitar calor fuerte","• Moderado a alto
+• Mantener humedad constante","• Altura: 1–2 m
+• Arbusto compacto
+• Crecimiento moderado","Septiembre – noviembre
+Floración abundante y ornamental","No relevante","• Ornamental premium
+• Jardines húmedos
+• Macizos y bordes","• Esquejes
+• Injertos","Floración elegante que llena de color los jardines de primavera"
+
+"rododendro-now-lady","Rododendro Now Lady","Rhododendron spp.","Rododendro ornamental de gran valor decorativo por sus grandes flores y follaje siempreverde. Ideal para jardines húmedos y protegidos donde puede desarrollarse con abundante floración.","• Ácido y húmedo
+• Rico en materia orgánica
+• Bien drenado","• Sombra parcial
+• Luz suave","• Moderado a alto
+• Mantener suelo húmedo
+• Sensible a sequía","• Altura: 1–2 m
+• Arbusto redondeado y denso
+• Crecimiento moderado","Septiembre – noviembre
+Flores grandes y vistosas","No relevante","• Ornamental premium
+• Jardines sombreados
+• Paisajismo elegante","• Esquejes
+• Injertos","Grandes flores ornamentales para jardines sofisticados"
+
+"rododendro-flor-haba","Rododendro Flor Haba","Rhododendron spp.","Variedad ornamental de rododendro muy apreciada por sus flores grandes y abundantes, que destacan intensamente en primavera. Su follaje siempreverde mantiene atractivo el jardín durante todo el año. Ideal para jardines húmedos y protegidos del sol fuerte.","• Ácido y rico en materia orgánica
+• Húmedo pero bien drenado
+• Sensible a suelos calcáreos","• Sombra parcial
+• Luz filtrada
+• Evitar sol fuerte de tarde","• Moderado a alto
+• Mantener humedad constante
+• No tolera sequía prolongada","• Altura: 1–2 m
+• Arbusto compacto y redondeado
+• Crecimiento moderado","Septiembre – noviembre
+Floración abundante y muy ornamental","No relevante","• Ornamental premium
+• Jardines húmedos y sombreados
+• Macizos florales","• Esquejes
+• Injertos","Floración abundante y elegante para jardines de alto impacto"
+
+"rododendro-virginia-richard","Rododendro Virginia Richard","Rhododendron spp.","Rododendro ornamental de flores vistosas y follaje denso, ideal para crear puntos focales en jardines húmedos y de semisombra. Muy apreciado por su aspecto elegante y su abundante floración primaveral.","• Ácido y fértil
+• Rico en materia orgánica
+• Bien drenado","• Sombra parcial
+• Protección de sol intenso","• Moderado a alto
+• Mantener humedad constante
+• Sensible a calor extremo","• Altura: 1–2 m
+• Arbusto compacto y ornamental
+• Crecimiento moderado","Septiembre – noviembre
+Grandes flores ornamentales","No relevante","• Ornamental premium
+• Jardines elegantes
+• Bordes y macizos","• Esquejes
+• Injertos","Grandes flores ornamentales para jardines sofisticados"
+
+"rododendro-golden-gate","Rododendro Golden Gate","Rhododendron spp.","Variedad ornamental muy llamativa por sus flores en tonos cálidos amarillos y anaranjados. Aporta luminosidad y color intenso al jardín durante primavera. Excelente para jardines húmedos y protegidos.","• Ácido y rico en materia orgánica
+• Bien drenado
+• Prefiere humedad constante","• Sombra parcial
+• Luz suave","• Moderado a alto
+• Mantener suelo húmedo","• Altura: 1–2 m
+• Arbusto compacto
+• Crecimiento moderado","Septiembre – noviembre
+Floración amarilla y anaranjada muy vistosa","No relevante","• Ornamental premium
+• Jardines de color
+• Macizos decorativos","• Esquejes
+• Injertos","Flores cálidas y luminosas que destacan en cualquier jardín"
+
+"rododendro-mary-rosse","Rododendro Mary Rosse","Rhododendron spp.","Rododendro ornamental muy elegante y florífero, ideal para jardines húmedos y sombreados. Sus flores crean un efecto visual muy atractivo durante primavera y comienzos de verano.","• Ácido y húmedo
+• Rico en materia orgánica
+• Bien drenado","• Sombra parcial
+• Evitar exposición extrema al sol","• Moderado a alto
+• Mantener humedad constante","• Altura: 1–2 m
+• Arbusto denso y ornamental
+• Crecimiento moderado","Septiembre – noviembre
+Floración abundante y decorativa","No relevante","• Ornamental premium
+• Jardines húmedos
+• Paisajismo elegante","• Esquejes
+• Injertos","Floración elegante y abundante para jardines húmedos"
+
+"spirea-thunbergii","Spirea Thunbergii","Spiraea thunbergii","Arbusto ornamental ligero y elegante, famoso por cubrirse de pequeñas flores blancas a comienzos de primavera. Muy fácil de cuidar y excelente para bordes, jardines pequeños y paisajismo de bajo mantenimiento.","• Bien drenado
+• Tolera distintos tipos de suelo
+• Prefiere sustrato ligero","• Sol pleno a semisombra
+• Florece mejor con buena luz","• Bajo a moderado
+• Resistente a sequía moderada","• Altura: 1–1.5 m
+• Forma arqueada y ligera
+• Crecimiento rápido","Agosto – octubre
+Floración blanca abundante y delicada","No relevante","• Bordes ornamentales
+• Jardines de bajo mantenimiento
+• Paisajismo natural","• Esquejes
+• División","Nube de flores blancas para iluminar el jardín en primavera"
