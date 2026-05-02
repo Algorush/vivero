@@ -214,7 +214,7 @@ function getPlantImageBaseName(page: NotionPage): string {
   return "plant";
 }
 
-function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string {
+function findExistingLocalImagePath(basePublicPathWithoutExt: string): string | null {
   for (const extension of LOCAL_IMAGE_EXTENSIONS) {
     const publicPath = `${basePublicPathWithoutExt}${extension}`;
     const absolutePath = path.resolve(
@@ -226,6 +226,16 @@ function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string
     if (existsSync(absolutePath)) {
       return publicPath;
     }
+  }
+
+  return null;
+}
+
+function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string {
+  const existingPath = findExistingLocalImagePath(basePublicPathWithoutExt);
+
+  if (existingPath) {
+    return existingPath;
   }
 
   return `${basePublicPathWithoutExt}.jpg`;
@@ -353,7 +363,12 @@ function mapPlant(page: NotionPage): Plant {
     // Check indices 1-10 for locally placed image files
     const baseName = getPlantImageBaseName(page);
     for (let i = 1; i <= 10; i++) {
-      allImages.push(resolveExistingLocalImagePath(`/notion-images/plants/${baseName}-${i}`));
+      const existingPath = findExistingLocalImagePath(
+        `/notion-images/plants/${baseName}-${i}`
+      );
+      if (existingPath) {
+        allImages.push(existingPath);
+      }
     }
   }
 
