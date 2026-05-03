@@ -241,16 +241,6 @@ function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string
   return `${basePublicPathWithoutExt}.jpg`;
 }
 
-function buildLocalPlantImagePath(
-  page: NotionPage,
-  _sourceUrl: string,
-  index: number
-): string {
-  const baseName = getPlantImageBaseName(page);
-
-  return resolveExistingLocalImagePath(`/notion-images/plants/${baseName}-${index + 1}`);
-}
-
 function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): string {
   if (bucket === "nursery") {
     return resolveExistingLocalImagePath("/notion-images/nursery/hero");
@@ -258,10 +248,6 @@ function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): s
 
   const hash = createUrlHash(normalizeUrlForStableHash(url));
   return resolveExistingLocalImagePath(`/notion-images/${bucket}/${hash}`);
-}
-
-function getNotionFileUrl(file: { file?: { url?: string }; external?: { url?: string } }): string {
-  return file.file?.url ?? file.external?.url ?? "";
 }
 
 // Returns heading text from heading_1/2/3 blocks.
@@ -347,28 +333,18 @@ function getImageFromBlock(block: NotionBlock): string {
 
 // Maps Notion database page to internal Plant model.
 function mapPlant(page: NotionPage): Plant {
-  const sourceImages = (page.properties.Image?.files ?? [])
-    .map((file) => getNotionFileUrl(file))
-    .filter(Boolean);
+  const allImages: string[] = [];
 
-  let allImages: string[] = [];
-  
-  // If Notion has images, use them
-  if (sourceImages.length > 0) {
-    allImages = sourceImages.map((url, index) =>
-      buildLocalPlantImagePath(page, url, index)
+  // Always scan local disk for all existing images (slug-1 through slug-10).
+  // Local files are the source of truth — Notion Image field count may not
+  // match the number of files actually downloaded to public/.
+  const baseName = getPlantImageBaseName(page);
+  for (let i = 1; i <= 10; i++) {
+    const existingPath = findExistingLocalImagePath(
+      `/notion-images/plants/${baseName}-${i}`
     );
-  } else {
-    // If Notion has no images, generate local paths for files that might exist manually
-    // Check indices 1-10 for locally placed image files
-    const baseName = getPlantImageBaseName(page);
-    for (let i = 1; i <= 10; i++) {
-      const existingPath = findExistingLocalImagePath(
-        `/notion-images/plants/${baseName}-${i}`
-      );
-      if (existingPath) {
-        allImages.push(existingPath);
-      }
+    if (existingPath) {
+      allImages.push(existingPath);
     }
   }
 

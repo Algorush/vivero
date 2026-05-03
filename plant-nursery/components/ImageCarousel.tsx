@@ -65,7 +65,7 @@ export default function ImageCarousel({
 
   return (
     <div
-      className={`relative select-none ${isFill ? "w-full h-full" : "w-full"}`}
+      className={`relative select-none ${isFill ? "h-full w-full" : "w-full"}`}
       style={{ touchAction: "pan-y" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -88,7 +88,7 @@ export default function ImageCarousel({
           alt={alt}
           width={1600}
           height={1600}
-          className={`w-full h-auto rounded-xl ${extraClass}`}
+          className={`h-auto w-full rounded-xl ${extraClass}`}
           style={{ width: "100%", height: "auto" }}
           priority={priority}
           quality={resolvedQuality}
