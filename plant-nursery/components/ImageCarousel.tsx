@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type ImageCarouselProps = {
   images: string[];
@@ -25,6 +25,9 @@ export default function ImageCarousel({
 }: ImageCarouselProps) {
   const [index, setIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const didSwipeRef = useRef(false);
+  const lastControlTouchAtRef = useRef(0);
 
   const validImages = images.length > 0 ? images : [];
   const count = validImages.length;
@@ -37,20 +40,59 @@ export default function ImageCarousel({
   const next = () => setIndex((i) => (i + 1) % count);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    didSwipeRef.current = false;
     setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(delta) > 40) {
-      if (delta < 0) {
+    if (touchStartX === null || touchStartY === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    // Only treat as horizontal swipe when X movement clearly dominates Y
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 40) {
+      didSwipeRef.current = true;
+      e.stopPropagation();
+      if (deltaX < 0) {
         next();
       } else {
         prev();
       }
     }
     setTouchStartX(null);
+    setTouchStartY(null);
+  };
+
+  // After a swipe the browser fires a synthetic click — stop it from
+  // bubbling up to any parent <Link> so navigation doesn't trigger.
+  const handleClick = (e: React.MouseEvent) => {
+    if (didSwipeRef.current) {
+      didSwipeRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const runControlAction = (e: React.SyntheticEvent, action: () => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+  };
+
+  const handleControlTouchEnd = (e: React.TouchEvent, action: () => void) => {
+    lastControlTouchAtRef.current = Date.now();
+    runControlAction(e, action);
+  };
+
+  const handleControlClick = (e: React.MouseEvent, action: () => void) => {
+    // Ignore synthetic click that follows touch on mobile browsers.
+    if (Date.now() - lastControlTouchAtRef.current < 600) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    runControlAction(e, action);
   };
 
   const isFill = "fill" in rest && rest.fill === true;
@@ -69,6 +111,7 @@ export default function ImageCarousel({
       style={{ touchAction: "pan-y" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onClick={handleClick}
     >
       {isFill ? (
         <Image
@@ -112,15 +155,19 @@ export default function ImageCarousel({
         <>
           {/* Arrow buttons */}
           <button
-            onClick={(e) => { e.preventDefault(); prev(); }}
-            className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm z-10 hover:bg-black/60"
+            type="button"
+            onTouchEnd={(e) => handleControlTouchEnd(e, prev)}
+            onClick={(e) => handleControlClick(e, prev)}
+            className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center text-lg z-10 hover:bg-black/60 touch-manipulation"
             aria-label="Foto anterior"
           >
             ‹
           </button>
           <button
-            onClick={(e) => { e.preventDefault(); next(); }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm z-10 hover:bg-black/60"
+            type="button"
+            onTouchEnd={(e) => handleControlTouchEnd(e, next)}
+            onClick={(e) => handleControlClick(e, next)}
+            className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center text-lg z-10 hover:bg-black/60 touch-manipulation"
             aria-label="Siguiente foto"
           >
             ›
@@ -131,8 +178,10 @@ export default function ImageCarousel({
             {validImages.map((_, i) => (
               <button
                 key={i}
-                onClick={(e) => { e.preventDefault(); setIndex(i); }}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-white" : "bg-white/50"}`}
+                type="button"
+                onTouchEnd={(e) => handleControlTouchEnd(e, () => setIndex(i))}
+                onClick={(e) => handleControlClick(e, () => setIndex(i))}
+                className={`w-2.5 h-2.5 rounded-full transition-colors touch-manipulation ${i === index ? "bg-white" : "bg-white/50"}`}
                 aria-label={`Foto ${i + 1}`}
               />
             ))}

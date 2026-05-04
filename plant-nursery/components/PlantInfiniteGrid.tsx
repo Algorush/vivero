@@ -19,6 +19,10 @@ type PlantsApiResponse = {
   hasMore: boolean;
 };
 
+function filterAvailablePlants(plants: Plant[]): Plant[] {
+  return plants.filter((plant) => plant.available === true);
+}
+
 export default function PlantInfiniteGrid({
   initialPlants,
   initialNextCursor,
@@ -26,7 +30,7 @@ export default function PlantInfiniteGrid({
   category,
   query,
 }: PlantInfiniteGridProps) {
-  const [plants, setPlants] = useState<Plant[]>(initialPlants);
+  const [plants, setPlants] = useState<Plant[]>(filterAvailablePlants(initialPlants));
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -35,7 +39,7 @@ export default function PlantInfiniteGrid({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setPlants(initialPlants);
+    setPlants(filterAvailablePlants(initialPlants));
     setNextCursor(initialNextCursor);
     setHasMore(initialHasMore);
     setError("");
@@ -82,7 +86,7 @@ export default function PlantInfiniteGrid({
 
       setPlants((prev) => {
         const existingIds = new Set(prev.map((plant) => plant.id));
-        const uniqueIncoming = data.plants.filter(
+        const uniqueIncoming = filterAvailablePlants(data.plants).filter(
           (plant) => !existingIds.has(plant.id)
         );
 

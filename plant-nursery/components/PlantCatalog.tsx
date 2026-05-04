@@ -53,6 +53,7 @@ export default function PlantCatalog({
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
+  const lastFilterTouchAtRef = useRef(0);
 
   useEffect(() => {
     setActiveCategory(initialCategory);
@@ -144,9 +145,26 @@ export default function PlantCatalog({
     };
   }, [activeCategory, applyFilters, searchInput]);
 
+  const runFilterAction = (action: () => void) => {
+    action();
+  };
+
+  const handleFilterTouchEnd = (action: () => void) => {
+    lastFilterTouchAtRef.current = Date.now();
+    runFilterAction(action);
+  };
+
+  const handleFilterClick = (action: () => void) => {
+    if (Date.now() - lastFilterTouchAtRef.current < 450) {
+      return;
+    }
+
+    runFilterAction(action);
+  };
+
   return (
     <>
-      <div className="mapuche-paper-surface sticky top-2 z-20 -mx-2 mb-8 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:static md:mx-0 md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
+      <div className="mapuche-paper-surface sticky top-2 z-20 -mx-2 mb-8 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
           <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
@@ -167,7 +185,8 @@ export default function PlantCatalog({
           <div className="flex gap-2 overflow-x-auto pb-2">
             <button
               type="button"
-              onClick={() => void applyFilters("", searchInput)}
+              onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters("", searchInput); })}
+              onClick={() => handleFilterClick(() => { void applyFilters("", searchInput); })}
               disabled={isFilterLoading}
               className={`mapuche-chip shrink-0 ${
                 !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
@@ -184,7 +203,8 @@ export default function PlantCatalog({
                 <button
                   key={category}
                   type="button"
-                  onClick={() => void applyFilters(category, searchInput)}
+                  onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters(category, searchInput); })}
+                  onClick={() => handleFilterClick(() => { void applyFilters(category, searchInput); })}
                   disabled={isFilterLoading}
                   className={`mapuche-chip shrink-0 ${
                     isActive ? "mapuche-chip-active" : "mapuche-chip-idle"
