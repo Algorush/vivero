@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    // Include data/ directory in the serverless function bundle on Vercel.
+    outputFileTracingIncludes: {
+      "/": ["./data/**/*"],
+    },
+  },
 };
 
 export default nextConfig;
