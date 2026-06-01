@@ -1,12 +1,8 @@
 import type { NextConfig } from "next";
 
-const lan78Origins = Array.from({ length: 256 }, (_, octet) =>
-  `192.168.${octet}.78`
-);
-
 const nextConfig: NextConfig = {
   // Dev convenience: allow all 192.168.x.78 LAN addresses.
-  allowedDevOrigins: lan78Origins,
+  allowedDevOrigins: ["192.168.71.78"],
   serverExternalPackages: ["sharp"],
   images: {
     unoptimized: true,
