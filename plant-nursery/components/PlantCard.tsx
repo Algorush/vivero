@@ -16,11 +16,11 @@ export default function PlantCard({
   return (
     <Link href={`/plants/${plant.slug}`} className="block min-w-0">
       <div
-        className="animate-card-in min-w-0 overflow-hidden rounded-2xl border bg-white p-4 shadow transition hover:shadow-lg motion-reduce:animate-none"
+        className="animate-card-in min-w-0 overflow-hidden rounded-2 bg-white shadow transition hover:shadow-lg motion-reduce:animate-none"
         style={{ animationDelay: `${animationDelayMs}ms` }}
       >
         {plant.images?.length > 0 && (
-          <div className="relative w-full h-48 rounded-xl mb-3 overflow-hidden">
+          <div className="relative w-full h-48 rounded mb-3 overflow-hidden">
             <ImageCarousel
               images={plant.images}
               alt={plant.name}

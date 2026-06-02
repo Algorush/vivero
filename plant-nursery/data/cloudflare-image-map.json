@@ -1,0 +1,238 @@
+{
+  "spirea-thunbergii": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-spirea-thunbergii-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-spirea-thunbergii-2.jpg"
+    ],
+    "hashes": [
+      "local:spirea-thunbergii-1",
+      "local:spirea-thunbergii-3"
+    ]
+  },
+  "rododendro-rosse": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-rosse-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-rosse-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-rosse-3.jpg"
+    ],
+    "hashes": [
+      "local:rododendro-rosse-1",
+      "local:rododendro-rosse-2",
+      "local:rododendro-rosse-3"
+    ]
+  },
+  "rododendro-golden-gate": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-golden-gate-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-golden-gate-2.jpg"
+    ],
+    "hashes": [
+      "local:rododendro-golden-gate-1",
+      "local:rododendro-golden-gate-2"
+    ]
+  },
+  "rododendro-virginia-richard": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-virginia-richard-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-virginia-richard-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-virginia-richard-3.jpg"
+    ],
+    "hashes": [
+      "local:rododendro-virginia-richard-1",
+      "local:rododendro-virginia-richard-2",
+      "local:rododendro-virginia-richard-3"
+    ]
+  },
+  "rododendro-flor-haba": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-flor-haba-1.jpg"
+    ],
+    "hashes": [
+      "local:rododendro-flor-haba-1"
+    ]
+  },
+  "rododendro-snow-lady": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-rododendro-snow-lady-1.jpg"
+    ],
+    "hashes": [
+      "local:rododendro-snow-lady-1"
+    ]
+  },
+  "boj-variegata": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-boj-variegata-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-boj-variegata-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-boj-variegata-3.jpg"
+    ],
+    "hashes": [
+      "local:boj-variegata-1",
+      "local:boj-variegata-2",
+      "local:boj-variegata-3"
+    ]
+  },
+  "campanilla-calceolaria-uniflora": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-campanilla-calceolaria-uniflora-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-campanilla-calceolaria-uniflora-2.jpg"
+    ],
+    "hashes": [
+      "local:campanilla-calceolaria-uniflora-1",
+      "local:campanilla-calceolaria-uniflora-2"
+    ]
+  },
+  "maqui-aristotelia-chilensis": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-maqui-aristotelia-chilensis-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-maqui-aristotelia-chilensis-2.jpg"
+    ],
+    "hashes": [
+      "local:maqui-aristotelia-chilensis-1",
+      "local:maqui-aristotelia-chilensis-2"
+    ]
+  },
+  "cipres-de-la-cordillera": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-cipres-de-la-cordillera-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-cipres-de-la-cordillera-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-cipres-de-la-cordillera-3.jpg"
+    ],
+    "hashes": [
+      "local:cipres-de-la-cordillera-1",
+      "local:cipres-de-la-cordillera-2",
+      "local:cipres-de-la-cordillera-3"
+    ]
+  },
+  "coigue": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-coigue-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-coigue-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-coigue-3.jpg"
+    ],
+    "hashes": [
+      "local:coigue-1",
+      "local:coigue-2",
+      "local:coigue-3"
+    ]
+  },
+  "chilco-fuchsia-magellanica": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-chilco-fuchsia-magellanica-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-chilco-fuchsia-magellanica-2.jpg"
+    ],
+    "hashes": [
+      "local:chilco-fuchsia-magellanica-1",
+      "local:chilco-fuchsia-magellanica-2"
+    ]
+  },
+  "alerce-fitzroya-cupressoides": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-alerce-fitzroya-cupressoides-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-alerce-fitzroya-cupressoides-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-alerce-fitzroya-cupressoides-3.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-alerce-fitzroya-cupressoides-4.jpg"
+    ],
+    "hashes": [
+      "local:alerce-fitzroya-cupressoides-1",
+      "local:alerce-fitzroya-cupressoides-2",
+      "local:alerce-fitzroya-cupressoides-3",
+      "local:alerce-fitzroya-cupressoides-4"
+    ]
+  },
+  "araucaria-araucana": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-2.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-3.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-4.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-5.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-araucaria-araucana-6.jpg"
+    ],
+    "hashes": [
+      "local:araucaria-araucana-1",
+      "local:araucaria-araucana-2",
+      "local:araucaria-araucana-3",
+      "local:araucaria-araucana-4",
+      "local:araucaria-araucana-5",
+      "local:araucaria-araucana-6"
+    ]
+  },
+  "roble-nothofagus-obliqua": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-roble-nothofagus-obliqua-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-roble-nothofagus-obliqua-2.jpg"
+    ],
+    "hashes": [
+      "local:roble-nothofagus-obliqua-1",
+      "local:roble-nothofagus-obliqua-2"
+    ]
+  },
+  "luma-amomyrtus-luma": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-luma-amomyrtus-luma-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-luma-amomyrtus-luma-2.jpg"
+    ],
+    "hashes": [
+      "local:luma-amomyrtus-luma-1",
+      "local:luma-amomyrtus-luma-2"
+    ]
+  },
+  "arrayan-luma-apiculata": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-arrayan-luma-apiculata-1.jpg"
+    ],
+    "hashes": [
+      "local:arrayan-luma-apiculata-1"
+    ]
+  },
+  "murta-ugni-molinae": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-murta-ugni-molinae-1.jpg",
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-murta-ugni-molinae-2.jpg"
+    ],
+    "hashes": [
+      "local:murta-ugni-molinae-1",
+      "local:murta-ugni-molinae-2"
+    ]
+  },
+  "copihue-lapageria-rosea": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-copihue-lapageria-rosea-1.jpg"
+    ],
+    "hashes": [
+      "https://prod-files-secure.s3.us-west-2.amazonaws.com/cef014ba-6d4b-81c0-9d93-00031ee300bb/ce51bd59-c8cb-4b57-b30d-97706d7ec9f1/copihue-1.jpg"
+    ]
+  },
+  "canelo-drimys-winteri": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-canelo-drimys-winteri-1.jpg"
+    ],
+    "hashes": [
+      "local:canelo-drimys-winteri-1"
+    ]
+  },
+  "laurel-chileno": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-laurel-chileno-1.jpg"
+    ],
+    "hashes": [
+      "local:laurel-chileno-1"
+    ]
+  },
+  "olivillo": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-olivillo-1.jpg"
+    ],
+    "hashes": [
+      "local:olivillo-1"
+    ]
+  },
+  "ulmo-eucryphia-cordifolia": {
+    "cdn": [
+      "https://pub-d2778be79c264c23b29bf7612ad65cae.r2.dev/plant-ulmo-eucryphia-cordifolia-1.jpg"
+    ],
+    "hashes": [
+      "local:ulmo-eucryphia-cordifolia-1"
+    ]
+  }
+}

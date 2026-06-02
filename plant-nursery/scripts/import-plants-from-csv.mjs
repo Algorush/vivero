@@ -1,6 +1,28 @@
 import { Client } from "@notionhq/client";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+
+function loadEnvFile(fileName) {
+  const fullPath = path.resolve(process.cwd(), fileName);
+  if (!existsSync(fullPath)) return;
+  const content = readFileSync(fullPath, "utf8");
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) continue;
+    const key = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+loadEnvFile(".env.local");
+loadEnvFile(".env");
 
 const REQUEST_TIMEOUT_MS = 120000;
 const RETRY_ATTEMPTS = 4;
@@ -164,8 +186,19 @@ function resolvePropertyName(properties, preferredName, expectedType, allowTypeF
   return typeMatch?.[0] ?? null;
 }
 
-async function getExistingSlugs(slugPropertyName) {
-  const slugs = new Set();
+function getPageRichText(page, propertyName) {
+  if (!propertyName) return "";
+  const items = page?.properties?.[propertyName]?.rich_text ?? [];
+  return items.map((item) => item?.plain_text ?? "").join("").trim();
+}
+
+function getPageSelect(page, propertyName) {
+  if (!propertyName) return "";
+  return page?.properties?.[propertyName]?.select?.name?.trim() ?? "";
+}
+
+async function getExistingPages(slugPropertyName) {
+  const pages = new Map(); // slug -> { id, properties }
   let cursor = undefined;
   let hasMore = true;
 
@@ -179,13 +212,13 @@ async function getExistingSlugs(slugPropertyName) {
       path: `databases/${getDatabaseId()}/query`,
       method: "post",
       body,
-    }, "Query existing slugs");
+    }, "Query existing pages");
 
     for (const page of response.results ?? []) {
       const items = page?.properties?.[slugPropertyName]?.rich_text ?? [];
       const slug = items.map((item) => item?.plain_text ?? "").join("").trim();
       if (slug) {
-        slugs.add(slug);
+        pages.set(slug, { id: page.id, properties: page.properties });
       }
     }
 
@@ -193,7 +226,7 @@ async function getExistingSlugs(slugPropertyName) {
     hasMore = Boolean(response.has_more && cursor);
   }
 
-  return slugs;
+  return pages;
 }
 
 function toTitle(value) {
@@ -224,6 +257,10 @@ function buildProperties(row, mapping) {
     ["Florece", "florece"],
     ["Fruta", "fruta"],
     ["Cuidados", "cuidados"],
+    ["Utilizacion", "utilizacion"],
+    ["Propagacion", "propagacion"],
+    ["Cientifico", "cientifico"],
+    ["Frase", "frase"],
   ];
 
   for (const [csvColumn, mappingKey] of richTextColumns) {
@@ -275,6 +312,10 @@ async function main() {
     florece: resolvePropertyName(properties, "Florece", "rich_text"),
     fruta: resolvePropertyName(properties, "Fruta", "rich_text"),
     cuidados: resolvePropertyName(properties, "Cuidados", "rich_text"),
+    utilizacion: resolvePropertyName(properties, "Utilizacion", "rich_text"),
+    propagacion: resolvePropertyName(properties, "Propagacion", "rich_text"),
+    cientifico: resolvePropertyName(properties, "Cientifico", "rich_text"),
+    frase: resolvePropertyName(properties, "Frase", "rich_text"),
     available: resolvePropertyName(properties, "Available", "checkbox"),
   };
 
@@ -282,24 +323,88 @@ async function main() {
     throw new Error("Required Notion properties for title/slug were not found.");
   }
 
-  const existingSlugs = await getExistingSlugs(mapping.slug);
+  const existingPages = await getExistingPages(mapping.slug);
   let created = 0;
+  let updated = 0;
   let skipped = 0;
   let failed = 0;
+
+  // Rich-text columns to check for missing values on existing records
+  const richTextCsvColumns = [
+    ["Description", "description"],
+    ["Descripcion", "description"],
+    ["Suelo", "suelo"],
+    ["Exposicion", "exposicion"],
+    ["Riego", "riego"],
+    ["Tamano", "tamano"],
+    ["Florece", "florece"],
+    ["Fruta", "fruta"],
+    ["Cuidados", "cuidados"],
+    ["Utilizacion", "utilizacion"],
+    ["Propagacion", "propagacion"],
+    ["Cientifico", "cientifico"],
+    ["Frase", "frase"],
+  ];
 
   for (const row of rows) {
     const slug = row.slug?.trim();
     const title = row.Title?.trim();
 
-    if (!slug || !title) {
+    if (!slug) {
       skipped += 1;
-      console.log(`[skip] Missing Title or slug: ${JSON.stringify(row)}`);
+      console.log(`[skip] Missing slug: ${JSON.stringify(row)}`);
       continue;
     }
 
-    if (existingSlugs.has(slug)) {
-      skipped += 1;
-      console.log(`[skip] Existing slug: ${slug}`);
+    const existing = existingPages.get(slug);
+
+    if (existing) {
+      // Update all fields that have a value in CSV (overwrite existing)
+      const updateProperties = {};
+
+      // Deduplicate: if both Description and Descripcion provided, use first non-empty
+      const seenMappingKeys = new Set();
+
+      for (const [csvColumn, mappingKey] of richTextCsvColumns) {
+        if (seenMappingKeys.has(mappingKey)) continue;
+        const propertyName = mapping[mappingKey];
+        if (!propertyName) continue;
+        const csvValue = row[csvColumn]?.trim();
+        if (!csvValue) continue;
+        updateProperties[propertyName] = { rich_text: toRichText(csvValue) };
+        seenMappingKeys.add(mappingKey);
+      }
+
+      // Also fill category if empty
+      if (mapping.category && row.Category?.trim()) {
+        const notionCategory = getPageSelect(existing, mapping.category);
+        if (!notionCategory) {
+          updateProperties[mapping.category] = { select: { name: row.Category.trim() } };
+        }
+      }
+
+      if (Object.keys(updateProperties).length === 0) {
+        skipped += 1;
+        console.log(`[skip] No missing fields: ${slug}`);
+        continue;
+      }
+
+      try {
+        await notionRequestWithRetry({
+          path: `pages/${existing.id}`,
+          method: "patch",
+          body: { properties: updateProperties },
+        }, `Update page for slug ${slug}`);
+      } catch (error) {
+        failed += 1;
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[fail] ${slug}: ${message}`);
+        continue;
+      }
+
+      updated += 1;
+      const updatedFields = Object.keys(updateProperties).join(", ");
+      console.log(`[update] ${slug}: ${updatedFields}`);
       continue;
     }
 
@@ -321,12 +426,13 @@ async function main() {
       continue;
     }
 
-    existingSlugs.add(slug);
+    existingPages.set(slug, { id: "new", properties: {} });
     created += 1;
     console.log(`[create] ${slug}`);
   }
 
   console.log(`Created: ${created}`);
+  console.log(`Updated: ${updated}`);
   console.log(`Skipped: ${skipped}`);
   console.log(`Failed: ${failed}`);
 }

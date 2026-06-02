@@ -1,10 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.107.78"],
+  // Dev convenience: allow all 192.168.x.78 LAN addresses.
+  allowedDevOrigins: ["192.168.71.78"],
   serverExternalPackages: ["sharp"],
   images: {
     unoptimized: true,
+  },
+  // Include data/ directory in the serverless function bundle on Vercel.
+  outputFileTracingIncludes: {
+    "/": ["./data/**/*"],
   },
 };
 

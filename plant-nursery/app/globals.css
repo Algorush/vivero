@@ -31,9 +31,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-html,
+html {
+  overflow-x: visible;
+}
+
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 h1,

@@ -40,15 +40,16 @@ export default async function PlantPage({ params }: PlantPageProps) {
       <h1 className="text-3xl font-bold mb-4">{plant.name}</h1>
 
       {plant.images?.length > 0 && (
-        <ImageCarousel
-          images={plant.images}
-          alt={plant.name}
-          natural
-          priority
-          quality={95}
-          sizes="100vw"
-          className="mb-4"
-        />
+        <div className="mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl">
+          <ImageCarousel
+            images={plant.images}
+            alt={plant.name}
+            fill
+            priority
+            quality={95}
+            sizes="(max-width: 768px) 100vw, 768px"
+          />
+        </div>
       )}
 
       <div className="-mx-6 my-4 overflow-hidden">

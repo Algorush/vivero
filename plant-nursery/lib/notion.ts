@@ -1,6 +1,9 @@
 import { Client } from "@notionhq/client";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { unstable_cache } from "next/cache";
 import type { Plant } from "@/types/plant";
+import { readImageMap, type ImageMap } from "./image-map";
 
 // --- Notion client -----------------------------------------------------------
 // Legacy API version while the workspace is not migrated to data sources.
@@ -106,6 +109,7 @@ const DEFAULT_PAGE_SIZE = 12;
 const CACHE_REVALIDATE_SECONDS = 300;
 const NURSERY_PAGE_RAW_ID = "Vivero-Kar-lemu-plantas-nativas-y-ex-ticas-33a014ba6d4b8024b8caf02162fc9492";
 export const PLANTS_REVALIDATE_TAG = "plants";
+const LOCAL_IMAGE_EXTENSIONS = [".webp", ".jpg", ".jpeg", ".png"];
 
 // --- Small helpers -----------------------------------------------------------
 // Resolves the Notion database ID from env vars.
@@ -211,27 +215,40 @@ function getPlantImageBaseName(page: NotionPage): string {
   return "plant";
 }
 
-function buildLocalPlantImagePath(
-  page: NotionPage,
-  _sourceUrl: string,
-  index: number
-): string {
-  const baseName = getPlantImageBaseName(page);
+function findExistingLocalImagePath(basePublicPathWithoutExt: string): string | null {
+  for (const extension of LOCAL_IMAGE_EXTENSIONS) {
+    const publicPath = `${basePublicPathWithoutExt}${extension}`;
+    const absolutePath = path.resolve(
+      process.cwd(),
+      "public",
+      publicPath.replace(/^\//, "")
+    );
 
-  return `/notion-images/plants/${baseName}-${index + 1}.jpg`;
+    if (existsSync(absolutePath)) {
+      return publicPath;
+    }
+  }
+
+  return null;
+}
+
+function resolveExistingLocalImagePath(basePublicPathWithoutExt: string): string {
+  const existingPath = findExistingLocalImagePath(basePublicPathWithoutExt);
+
+  if (existingPath) {
+    return existingPath;
+  }
+
+  return `${basePublicPathWithoutExt}.jpg`;
 }
 
 function buildLocalNotionImagePath(url: string, bucket: "plants" | "nursery"): string {
   if (bucket === "nursery") {
-    return "/notion-images/nursery/hero.jpg";
+    return resolveExistingLocalImagePath("/notion-images/nursery/hero");
   }
 
   const hash = createUrlHash(normalizeUrlForStableHash(url));
-  return `/notion-images/${bucket}/${hash}.jpg`;
-}
-
-function getNotionFileUrl(file: { file?: { url?: string }; external?: { url?: string } }): string {
-  return file.file?.url ?? file.external?.url ?? "";
+  return resolveExistingLocalImagePath(`/notion-images/${bucket}/${hash}`);
 }
 
 // Returns heading text from heading_1/2/3 blocks.
@@ -316,14 +333,27 @@ function getImageFromBlock(block: NotionBlock): string {
 }
 
 // Maps Notion database page to internal Plant model.
-function mapPlant(page: NotionPage): Plant {
-  const sourceImages = (page.properties.Image?.files ?? [])
-    .map((file) => getNotionFileUrl(file))
-    .filter(Boolean);
+function mapPlant(page: NotionPage, imageMap: ImageMap = {}): Plant {
+  const baseName = getPlantImageBaseName(page);
+  const entry = imageMap[baseName];
 
-  const allImages = sourceImages.map((url, index) =>
-    buildLocalPlantImagePath(page, url, index)
-  );
+  let allImages: string[];
+
+  if (entry?.cdn?.length) {
+    // Use Cloudflare CDN URLs when available.
+    allImages = entry.cdn;
+  } else {
+    // Fallback: scan local disk for downloaded images.
+    allImages = [];
+    for (let i = 1; i <= 10; i++) {
+      const existingPath = findExistingLocalImagePath(
+        `/notion-images/plants/${baseName}-${i}`
+      );
+      if (existingPath) {
+        allImages.push(existingPath);
+      }
+    }
+  }
 
   return {
     id: page.id,
@@ -490,6 +520,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
   const plants: Plant[] = [];
   let cursor: string | undefined;
   let hasMore = true;
+  const imageMap = readImageMap();
 
   while (hasMore) {
     const response = await queryPlants({
@@ -497,7 +528,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
       pageSize: 100,
     });
 
-    plants.push(...response.results.filter((p) => p.object === "page").map(mapPlant));
+    plants.push(...response.results.filter((p) => p.object === "page").map((p) => mapPlant(p, imageMap)));
 
     cursor = response.next_cursor ?? undefined;
     hasMore = Boolean(response.has_more && cursor);
@@ -522,9 +553,10 @@ const getPlantsPageCached = unstable_cache(
       pageSize,
     });
 
+    const imageMap = readImageMap();
     const plants = response.results
       .filter((p) => p.object === "page")
-      .map(mapPlant);
+      .map((p) => mapPlant(p, imageMap));
 
     return {
       plants,
@@ -552,7 +584,7 @@ const getPlantBySlugCached = unstable_cache(
     });
 
     const page = response.results.find((p) => p.object === "page");
-    return page ? mapPlant(page) : null;
+    return page ? mapPlant(page, readImageMap()) : null;
   },
   ["notion-plant-by-slug"],
   {
