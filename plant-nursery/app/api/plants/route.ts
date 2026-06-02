@@ -11,12 +11,14 @@ function parsePageSize(rawValue: string | null | undefined): number {
 
 async function resolvePage(params: {
   category?: string;
+  nativo?: boolean;
   cursor?: string;
   query?: string;
   pageSize?: number;
 }) {
   const page = await getPlantsPage({
     category: params.category,
+    nativo: params.nativo,
     cursor: params.cursor,
     query: params.query,
     pageSize: params.pageSize,
@@ -30,6 +32,8 @@ export async function GET(request: NextRequest) {
     const category = request.nextUrl.searchParams.get("category") ?? undefined;
     const cursor = request.nextUrl.searchParams.get("cursor") ?? undefined;
     const query = request.nextUrl.searchParams.get("q") ?? undefined;
+    const nativoRaw = request.nextUrl.searchParams.get("nativo");
+    const nativo = nativoRaw === "true" ? true : nativoRaw === "false" ? false : undefined;
 
     const pageSize = parsePageSize(
       request.nextUrl.searchParams.get("pageSize")
@@ -37,6 +41,7 @@ export async function GET(request: NextRequest) {
 
     return resolvePage({
       category,
+      nativo,
       cursor,
       query,
       pageSize,
@@ -53,6 +58,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json().catch(() => ({}))) as {
       category?: string;
+      nativo?: boolean;
       cursor?: string;
       query?: string;
       pageSize?: number;
@@ -60,6 +66,7 @@ export async function POST(request: NextRequest) {
 
     return resolvePage({
       category: body.category,
+      nativo: typeof body.nativo === "boolean" ? body.nativo : undefined,
       cursor: body.cursor,
       query: body.query,
       pageSize: parsePageSize(String(body.pageSize ?? "12")),

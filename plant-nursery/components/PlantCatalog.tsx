@@ -9,6 +9,7 @@ type PlantCatalogProps = {
   categories: string[];
   initialCategory: string;
   initialQuery: string;
+  initialNativo?: boolean;
   initialPage: PlantsPageResult;
 };
 
@@ -25,7 +26,7 @@ function isPlantsPageResult(data: PlantsApiResponse): data is PlantsPageResult {
   );
 }
 
-function createFilterUrl(category?: string, searchQuery?: string): string {
+function createFilterUrl(category?: string, searchQuery?: string, nativo?: boolean): string {
   const params = new URLSearchParams();
 
   if (category) {
@@ -36,6 +37,10 @@ function createFilterUrl(category?: string, searchQuery?: string): string {
     params.set("q", searchQuery);
   }
 
+  if (nativo !== undefined) {
+    params.set("nativo", String(nativo));
+  }
+
   const queryString = params.toString();
   return queryString ? `/?${queryString}` : "/";
 }
@@ -44,11 +49,13 @@ export default function PlantCatalog({
   categories,
   initialCategory,
   initialQuery,
+  initialNativo,
   initialPage,
 }: PlantCatalogProps) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
+  const [activeNativo, setActiveNativo] = useState<boolean | undefined>(initialNativo);
   const [page, setPage] = useState(initialPage);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState("");
@@ -59,17 +66,19 @@ export default function PlantCatalog({
     setActiveCategory(initialCategory);
     setSearchInput(initialQuery);
     setActiveQuery(initialQuery);
+    setActiveNativo(initialNativo);
     setPage(initialPage);
     setFilterError("");
     setIsFilterLoading(false);
-  }, [initialCategory, initialPage, initialQuery]);
+  }, [initialCategory, initialPage, initialNativo, initialQuery]);
 
-  const applyFilters = useCallback(async (nextCategory: string, rawQuery: string) => {
+  const applyFilters = useCallback(async (nextCategory: string, rawQuery: string, nextNativo: boolean | undefined) => {
     const nextQuery = rawQuery.trim();
 
     if (
       normalize(nextCategory) === normalize(activeCategory) &&
-      nextQuery === activeQuery
+      nextQuery === activeQuery &&
+      nextNativo === activeNativo
     ) {
       return;
     }
@@ -87,6 +96,9 @@ export default function PlantCatalog({
       }
       if (nextQuery) {
         query.set("q", nextQuery);
+      }
+      if (nextNativo !== undefined) {
+        query.set("nativo", String(nextNativo));
       }
       query.set("pageSize", "12");
 
@@ -109,13 +121,14 @@ export default function PlantCatalog({
 
       setActiveCategory(nextCategory);
       setActiveQuery(nextQuery);
+      setActiveNativo(nextNativo);
       setPage(data);
 
       if (typeof window !== "undefined") {
         window.history.replaceState(
           {},
           "",
-          createFilterUrl(nextCategory, nextQuery)
+          createFilterUrl(nextCategory, nextQuery, nextNativo)
         );
       }
     } catch (error) {
@@ -133,17 +146,17 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, [activeCategory, activeQuery]);
+  }, [activeCategory, activeQuery, activeNativo]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void applyFilters(activeCategory, searchInput);
+      void applyFilters(activeCategory, searchInput, activeNativo);
     }, 320);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [activeCategory, applyFilters, searchInput]);
+  }, [activeCategory, activeNativo, applyFilters, searchInput]);
 
   const runFilterAction = (action: () => void) => {
     action();
@@ -162,13 +175,57 @@ export default function PlantCatalog({
     runFilterAction(action);
   };
 
+  const toggleNativo = (value: boolean | undefined) => {
+    const next = activeNativo === value ? undefined : value;
+    void applyFilters(activeCategory, searchInput, next);
+  };
+
   return (
     <>
       <div className="sticky top-2 z-20 mb-8">
         <div className="mapuche-paper-surface -mx-2 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
-            <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleNativo(true)}
+                    disabled={isFilterLoading}
+                    className={`mapuche-chip shrink-0 ${
+                      activeNativo === true ? "mapuche-chip-active" : "mapuche-chip-idle"
+                    } disabled:cursor-wait disabled:opacity-70`}
+                    aria-pressed={activeNativo === true}
+                  >
+                    🌿 Nativas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleNativo(false)}
+                    disabled={isFilterLoading}
+                    className={`mapuche-chip shrink-0 ${
+                      activeNativo === false ? "mapuche-chip-active" : "mapuche-chip-idle"
+                    } disabled:cursor-wait disabled:opacity-70`}
+                    aria-pressed={activeNativo === false}
+                  >
+                    🌺 Exóticas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyFilters(activeCategory, searchInput, undefined)}
+                    disabled={isFilterLoading}
+                    className={`mapuche-chip shrink-0 ${
+                      activeNativo === undefined ? "mapuche-chip-active" : "mapuche-chip-idle"
+                    } disabled:cursor-wait disabled:opacity-70`}
+                    aria-pressed={activeNativo === undefined}
+                  >
+                    Todas
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
+            </div>
           </div>
 
           <div className="mb-3">
@@ -186,8 +243,8 @@ export default function PlantCatalog({
             <div className="flex gap-2 overflow-x-auto pb-2">
               <button
                 type="button"
-                onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters("", searchInput); })}
-                onClick={() => handleFilterClick(() => { void applyFilters("", searchInput); })}
+                onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters("", searchInput, activeNativo); })}
+                onClick={() => handleFilterClick(() => { void applyFilters("", searchInput, activeNativo); })}
                 disabled={isFilterLoading}
                 className={`mapuche-chip shrink-0 ${
                   !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
@@ -204,8 +261,8 @@ export default function PlantCatalog({
                   <button
                     key={category}
                     type="button"
-                    onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters(category, searchInput); })}
-                    onClick={() => handleFilterClick(() => { void applyFilters(category, searchInput); })}
+                    onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters(category, searchInput, activeNativo); })}
+                    onClick={() => handleFilterClick(() => { void applyFilters(category, searchInput, activeNativo); })}
                     disabled={isFilterLoading}
                     className={`mapuche-chip shrink-0 ${
                       isActive ? "mapuche-chip-active" : "mapuche-chip-idle"
@@ -218,6 +275,7 @@ export default function PlantCatalog({
               })}
             </div>
           </div>
+
         </div>
       </div>
 
@@ -231,12 +289,13 @@ export default function PlantCatalog({
 
       <div className="relative">
         <PlantInfiniteGrid
-          key={`${activeCategory || "all"}:${activeQuery}`}
+          key={`${activeCategory || "all"}:${activeQuery}:${String(activeNativo)}`}
           initialPlants={page.plants}
           initialNextCursor={page.nextCursor}
           initialHasMore={page.hasMore}
           category={activeCategory}
           query={activeQuery}
+          nativo={activeNativo}
         />
       </div>
     </>

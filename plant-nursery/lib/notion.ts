@@ -28,6 +28,7 @@ type NotionPage = {
     Fruta?: { rich_text?: Array<{ plain_text?: string }> };
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
+    Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
     Amount?: { number?: number | null };
     Available?: { checkbox?: boolean };
@@ -48,6 +49,7 @@ type LegacyQueryResponse = {
 
 type GetPlantsPageOptions = {
   category?: string;
+  nativo?: boolean;
   cursor?: string;
   query?: string;
   pageSize?: number;
@@ -368,6 +370,7 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}): Plant {
     fruta: textArrayToPlain(page.properties.Fruta?.rich_text),
     tamano: textArrayToPlain(page.properties.Tamano?.rich_text),
     category: page.properties.Category?.select?.name || "",
+    nativo: page.properties.Nativo?.checkbox ?? false,
     price: page.properties.Price?.number || 0,
     amount: page.properties.Amount?.number || 0,
     available: page.properties.Available?.checkbox || false,
@@ -446,8 +449,10 @@ export async function getPlantsPage(
   const cursor = options.cursor?.trim() ?? "";
   const query = normalizeSearchQuery(options.query) ?? "";
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+  const nativo = options.nativo;
 
-  if (query) {
+  // Use in-memory full-list filtering when any text search or nativo filter is active.
+  if (query || nativo !== undefined) {
     const normalizedQuery = normalizeSearchText(query);
     const normalizedCategory = normalizeSearchText(category);
 
@@ -459,22 +464,30 @@ export async function getPlantsPage(
         return false;
       }
 
-      const searchableText = [
-        plant.name,
-        plant.category,
-        plant.description,
-        plant.flor,
-        plant.riego,
-        plant.suelo,
-        plant.florece,
-        plant.exposicion,
-        plant.fruta,
-        plant.tamano,
-      ]
-        .map((value) => normalizeSearchText(value ?? ""))
-        .join(" ");
+      if (nativo !== undefined && plant.nativo !== nativo) {
+        return false;
+      }
 
-      return searchableText.includes(normalizedQuery);
+      if (normalizedQuery) {
+        const searchableText = [
+          plant.name,
+          plant.category,
+          plant.description,
+          plant.flor,
+          plant.riego,
+          plant.suelo,
+          plant.florece,
+          plant.exposicion,
+          plant.fruta,
+          plant.tamano,
+        ]
+          .map((value) => normalizeSearchText(value ?? ""))
+          .join(" ");
+
+        if (!searchableText.includes(normalizedQuery)) return false;
+      }
+
+      return true;
     });
 
     const startIndex = parseOffsetCursor(cursor);
@@ -489,7 +502,11 @@ export async function getPlantsPage(
     };
   }
 
-  return getPlantsPageCached(category, cursor, pageSize);
+  if (category) {
+    return getPlantsPageCached(category, cursor, pageSize);
+  }
+
+  return getPlantsPageCached("", cursor, pageSize);
 }
 
 // Returns unique sorted plant categories.
