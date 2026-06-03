@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/notion";
 import PlantCatalog from "@/components/PlantCatalog";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
@@ -115,6 +116,10 @@ plantas nativas y exóticas
                     Ver direccion en mapa
                   </a>
                 )}
+
+                <Link href="/sobre-nuestro-vivero" className="mapuche-button-secondary">
+                  Sobre Nuestro Vivero
+                </Link>
               </div>
             )}
           </div>

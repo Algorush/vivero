@@ -180,6 +180,13 @@ export default function PlantCatalog({
     void applyFilters(activeCategory, searchInput, next);
   };
 
+  const catalogLabel =
+    activeNativo === true
+      ? "Fillke Aliwentu"
+      : activeNativo === false
+        ? "Fillke Anumka"
+        : "";
+
   return (
     <>
       <div className="sticky top-2 z-20 mb-8">
@@ -188,6 +195,11 @@ export default function PlantCatalog({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
+                {catalogLabel ? (
+                  <span className="text-lg font-medium text-[#8b4f35]">
+                    {catalogLabel}
+                  </span>
+                ) : null}
                 <div className="flex shrink-0 gap-2">
                   <button
                     type="button"

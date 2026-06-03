@@ -96,6 +96,11 @@ export type NurseryProfile = {
   mapUrl: string;
 };
 
+export type NurseryAbout = {
+  title: string;
+  body: string;
+};
+
 type NurserySection =
   | "title"
   | "description"
@@ -277,6 +282,38 @@ function getParagraphText(block: NotionBlock): string {
   }
 
   return richTextToPlain(block.paragraph?.rich_text);
+}
+
+function getSectionBodyAfterHeading(blocks: NotionBlock[], headingLabel: string): string {
+  const normalizedTarget = normalizeHeading(headingLabel);
+  const paragraphs: string[] = [];
+  let isCollecting = false;
+
+  for (const block of blocks) {
+    const heading = getHeadingText(block);
+    if (heading) {
+      if (isCollecting) {
+        break;
+      }
+
+      if (normalizeHeading(heading) === normalizedTarget) {
+        isCollecting = true;
+      }
+
+      continue;
+    }
+
+    if (!isCollecting) {
+      continue;
+    }
+
+    const paragraphText = getParagraphText(block);
+    if (paragraphText) {
+      paragraphs.push(paragraphText);
+    }
+  }
+
+  return paragraphs.join("\n\n").trim();
 }
 
 // Returns a URL from supported link-like blocks.
@@ -531,6 +568,10 @@ export async function getNurseryProfile(): Promise<NurseryProfile> {
   return getNurseryProfileCached();
 }
 
+export async function getNurseryAbout(): Promise<NurseryAbout> {
+  return getNurseryAboutCached();
+}
+
 // --- Cached queries ----------------------------------------------------------
 // Cached full list for catalog and category derivation.
 const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
@@ -705,6 +746,33 @@ const getNurseryProfileCached = unstable_cache(
     };
   },
   ["notion-nursery-profile"],
+  {
+    revalidate: CACHE_REVALIDATE_SECONDS,
+    tags: [PLANTS_REVALIDATE_TAG],
+  }
+);
+
+const getNurseryAboutCached = unstable_cache(
+  async (): Promise<NurseryAbout> => {
+    const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
+
+    const children = await notionLegacy.request<NotionBlocksResponse>({
+      path: `blocks/${pageId}/children?page_size=50`,
+      method: "get",
+    });
+
+    const blocks = children.results ?? [];
+
+    return {
+      title: "Sobre Nuestro Vivero",
+      body:
+        getSectionBodyAfterHeading(blocks, "Sobre Nosotros") ||
+        getSectionBodyAfterHeading(blocks, "Sobre nuestro vivero") ||
+        blocks.map(getParagraphText).find(Boolean) ||
+        "",
+    };
+  },
+  ["notion-nursery-about"],
   {
     revalidate: CACHE_REVALIDATE_SECONDS,
     tags: [PLANTS_REVALIDATE_TAG],
