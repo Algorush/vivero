@@ -37,7 +37,7 @@ function stableHash(url: string): string {
 
 function verifySignature(rawBody: string, signature: string, secret: string): boolean {
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  const expectedFull = `v0=${expected}`;
+  const expectedFull = `sha256=${expected}`;
   try {
     return timingSafeEqual(Buffer.from(signature), Buffer.from(expectedFull));
   } catch {
@@ -108,13 +108,25 @@ async function syncPageImages(pageId: string): Promise<void> {
 
 // --- Route handler -----------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+  const signature = request.headers.get("notion-signature") ?? "";
+
+  let payload: { type?: string; entity?: { id?: string }; verification_token?: string };
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (payload?.verification_token) {
+    console.log("[notion-webhook] verification token", payload.verification_token);
+    return NextResponse.json({ ok: true });
+  }
+
   const webhookSecret = process.env.NOTION_WEBHOOK_SECRET;
   if (!webhookSecret) {
     return NextResponse.json({ error: "NOTION_WEBHOOK_SECRET not configured" }, { status: 500 });
   }
-
-  const rawBody = await request.text();
-  const signature = request.headers.get("notion-signature") ?? "";
 
   if (process.env.DEBUG_NOTION_WEBHOOK === "1") {
     console.log("[notion-webhook] incoming request", {
@@ -126,13 +138,6 @@ export async function POST(request: NextRequest) {
 
   if (!verifySignature(rawBody, signature, webhookSecret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  }
-
-  let payload: { type?: string; entity?: { id?: string } };
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const pageId = payload?.entity?.id;
