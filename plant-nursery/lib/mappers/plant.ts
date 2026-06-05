@@ -14,6 +14,7 @@ type NotionPageLike = {
     Fruta?: { rich_text?: Array<{ plain_text?: string }> };
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
+    Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
     Amount?: { number?: number | null };
     Available?: { checkbox?: boolean };
@@ -43,6 +44,7 @@ export function mapPlant(page: NotionPageLike): Plant {
     fruta: textArrayToPlain(page.properties.Fruta?.rich_text),
     tamano: textArrayToPlain(page.properties.Tamano?.rich_text),
     category: page.properties.Category?.select?.name || "",
+    nativo: page.properties.Nativo?.checkbox ?? false,
     price: page.properties.Price?.number || 0,
     amount: page.properties.Amount?.number || 0,
     available: page.properties.Available?.checkbox || false,

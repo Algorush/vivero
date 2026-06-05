@@ -578,7 +578,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
   const plants: Plant[] = [];
   let cursor: string | undefined;
   let hasMore = true;
-  const imageMap = readImageMap();
+  const imageMap = await readImageMap();
 
   while (hasMore) {
     const response = await queryPlants({
@@ -611,7 +611,7 @@ const getPlantsPageCached = unstable_cache(
       pageSize,
     });
 
-    const imageMap = readImageMap();
+    const imageMap = await readImageMap();
     const plants = response.results
       .filter((p) => p.object === "page")
       .map((p) => mapPlant(p, imageMap));
@@ -642,7 +642,8 @@ const getPlantBySlugCached = unstable_cache(
     });
 
     const page = response.results.find((p) => p.object === "page");
-    return page ? mapPlant(page, readImageMap()) : null;
+    const imageMap = await readImageMap();
+    return page ? mapPlant(page, imageMap) : null;
   },
   ["notion-plant-by-slug"],
   {

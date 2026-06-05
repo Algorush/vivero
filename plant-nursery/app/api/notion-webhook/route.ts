@@ -74,7 +74,7 @@ async function syncPageImages(pageId: string): Promise<void> {
 
   if (notionUrls.length === 0) return;
 
-  const map = readImageMap();
+  const map = await readImageMap();
   const existing = map[slug] ?? { cdn: [], hashes: [] };
   const newCdn: string[] = [];
   const newHashes: string[] = [];
@@ -103,7 +103,7 @@ async function syncPageImages(pageId: string): Promise<void> {
   }
 
   map[slug] = { cdn: newCdn, hashes: newHashes };
-  writeImageMap(map);
+  await writeImageMap(map);
 }
 
 // --- Route handler -----------------------------------------------------------
@@ -115,6 +115,14 @@ export async function POST(request: NextRequest) {
 
   const rawBody = await request.text();
   const signature = request.headers.get("notion-signature") ?? "";
+
+  if (process.env.DEBUG_NOTION_WEBHOOK === "1") {
+    console.log("[notion-webhook] incoming request", {
+      signature,
+      contentType: request.headers.get("content-type") ?? "",
+      rawBody,
+    });
+  }
 
   if (!verifySignature(rawBody, signature, webhookSecret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });

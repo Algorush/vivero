@@ -12,6 +12,7 @@
 import { Client } from "@notionhq/client";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { uploadImageFromUrl, uploadLocalFile } from "./upload-to-cloudinary.mjs";
 
 // --- Load .env ---------------------------------------------------------------
@@ -45,6 +46,23 @@ const notion = new Client({
 
 // --- Image map ---------------------------------------------------------------
 const IMAGE_MAP_PATH = path.resolve(process.cwd(), "data", "cloudflare-image-map.json");
+const IMAGE_MAP_KEY = "cloudflare-image-map.json";
+
+function getR2Client() {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
 
 function readMap() {
   if (!existsSync(IMAGE_MAP_PATH)) return {};
@@ -55,10 +73,23 @@ function readMap() {
   }
 }
 
-function saveMap(map) {
+async function saveMap(map) {
   const dir = path.dirname(IMAGE_MAP_PATH);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(IMAGE_MAP_PATH, JSON.stringify(map, null, 2));
+
+  const client = getR2Client();
+  const bucket = process.env.CLOUDFLARE_R2_BUCKET;
+  if (!client || !bucket) return;
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: IMAGE_MAP_KEY,
+      Body: JSON.stringify(map, null, 2),
+      ContentType: "application/json",
+    })
+  );
 }
 
 // --- Helpers -----------------------------------------------------------------
@@ -217,7 +248,7 @@ async function main() {
     if (changed) updatedCount++;
   }
 
-  saveMap(map);
+  await saveMap(map);
   console.log(`\nDone. Updated ${updatedCount}/${plants.length} plants.`);
   console.log(`Image map saved to: ${IMAGE_MAP_PATH}`);
 }
