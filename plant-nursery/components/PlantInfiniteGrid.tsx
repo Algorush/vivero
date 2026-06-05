@@ -11,6 +11,7 @@ type PlantInfiniteGridProps = {
   initialHasMore: boolean;
   category: string;
   query: string;
+  nativo?: boolean;
 };
 
 type PlantsApiResponse = {
@@ -29,6 +30,7 @@ export default function PlantInfiniteGrid({
   initialHasMore,
   category,
   query,
+  nativo,
 }: PlantInfiniteGridProps) {
   const [plants, setPlants] = useState<Plant[]>(filterAvailablePlants(initialPlants));
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -58,6 +60,7 @@ export default function PlantInfiniteGrid({
       const payload = {
         category: category || undefined,
         query: query || undefined,
+        nativo,
         cursor: nextCursor,
         pageSize: 12,
       };
@@ -108,7 +111,7 @@ export default function PlantInfiniteGrid({
     } finally {
       setIsLoading(false);
     }
-  }, [category, hasMore, isLoading, nextCursor, query]);
+  }, [category, hasMore, isLoading, nativo, nextCursor, query]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {

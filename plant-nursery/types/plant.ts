@@ -11,6 +11,7 @@ export type Plant = {
   fruta: string;
   tamano: string;
   category: string;
+  nativo: boolean;
   price: number;
   amount: number;
   available: boolean;

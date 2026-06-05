@@ -28,6 +28,7 @@ type NotionPage = {
     Fruta?: { rich_text?: Array<{ plain_text?: string }> };
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
+    Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
     Amount?: { number?: number | null };
     Available?: { checkbox?: boolean };
@@ -48,6 +49,7 @@ type LegacyQueryResponse = {
 
 type GetPlantsPageOptions = {
   category?: string;
+  nativo?: boolean;
   cursor?: string;
   query?: string;
   pageSize?: number;
@@ -92,6 +94,11 @@ export type NurseryProfile = {
   ownerName: string;
   location: string;
   mapUrl: string;
+};
+
+export type NurseryAbout = {
+  title: string;
+  body: string;
 };
 
 type NurserySection =
@@ -277,6 +284,38 @@ function getParagraphText(block: NotionBlock): string {
   return richTextToPlain(block.paragraph?.rich_text);
 }
 
+function getSectionBodyAfterHeading(blocks: NotionBlock[], headingLabel: string): string {
+  const normalizedTarget = normalizeHeading(headingLabel);
+  const paragraphs: string[] = [];
+  let isCollecting = false;
+
+  for (const block of blocks) {
+    const heading = getHeadingText(block);
+    if (heading) {
+      if (isCollecting) {
+        break;
+      }
+
+      if (normalizeHeading(heading) === normalizedTarget) {
+        isCollecting = true;
+      }
+
+      continue;
+    }
+
+    if (!isCollecting) {
+      continue;
+    }
+
+    const paragraphText = getParagraphText(block);
+    if (paragraphText) {
+      paragraphs.push(paragraphText);
+    }
+  }
+
+  return paragraphs.join("\n\n").trim();
+}
+
 // Returns a URL from supported link-like blocks.
 function getBlockUrl(block: NotionBlock): string {
   if (block.type === "embed") {
@@ -368,6 +407,7 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}): Plant {
     fruta: textArrayToPlain(page.properties.Fruta?.rich_text),
     tamano: textArrayToPlain(page.properties.Tamano?.rich_text),
     category: page.properties.Category?.select?.name || "",
+    nativo: page.properties.Nativo?.checkbox ?? false,
     price: page.properties.Price?.number || 0,
     amount: page.properties.Amount?.number || 0,
     available: page.properties.Available?.checkbox || false,
@@ -446,8 +486,10 @@ export async function getPlantsPage(
   const cursor = options.cursor?.trim() ?? "";
   const query = normalizeSearchQuery(options.query) ?? "";
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+  const nativo = options.nativo;
 
-  if (query) {
+  // Use in-memory full-list filtering when any text search or nativo filter is active.
+  if (query || nativo !== undefined) {
     const normalizedQuery = normalizeSearchText(query);
     const normalizedCategory = normalizeSearchText(category);
 
@@ -459,22 +501,30 @@ export async function getPlantsPage(
         return false;
       }
 
-      const searchableText = [
-        plant.name,
-        plant.category,
-        plant.description,
-        plant.flor,
-        plant.riego,
-        plant.suelo,
-        plant.florece,
-        plant.exposicion,
-        plant.fruta,
-        plant.tamano,
-      ]
-        .map((value) => normalizeSearchText(value ?? ""))
-        .join(" ");
+      if (nativo !== undefined && plant.nativo !== nativo) {
+        return false;
+      }
 
-      return searchableText.includes(normalizedQuery);
+      if (normalizedQuery) {
+        const searchableText = [
+          plant.name,
+          plant.category,
+          plant.description,
+          plant.flor,
+          plant.riego,
+          plant.suelo,
+          plant.florece,
+          plant.exposicion,
+          plant.fruta,
+          plant.tamano,
+        ]
+          .map((value) => normalizeSearchText(value ?? ""))
+          .join(" ");
+
+        if (!searchableText.includes(normalizedQuery)) return false;
+      }
+
+      return true;
     });
 
     const startIndex = parseOffsetCursor(cursor);
@@ -489,7 +539,11 @@ export async function getPlantsPage(
     };
   }
 
-  return getPlantsPageCached(category, cursor, pageSize);
+  if (category) {
+    return getPlantsPageCached(category, cursor, pageSize);
+  }
+
+  return getPlantsPageCached("", cursor, pageSize);
 }
 
 // Returns unique sorted plant categories.
@@ -514,13 +568,17 @@ export async function getNurseryProfile(): Promise<NurseryProfile> {
   return getNurseryProfileCached();
 }
 
+export async function getNurseryAbout(): Promise<NurseryAbout> {
+  return getNurseryAboutCached();
+}
+
 // --- Cached queries ----------------------------------------------------------
 // Cached full list for catalog and category derivation.
 const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
   const plants: Plant[] = [];
   let cursor: string | undefined;
   let hasMore = true;
-  const imageMap = readImageMap();
+  const imageMap = await readImageMap();
 
   while (hasMore) {
     const response = await queryPlants({
@@ -553,7 +611,7 @@ const getPlantsPageCached = unstable_cache(
       pageSize,
     });
 
-    const imageMap = readImageMap();
+    const imageMap = await readImageMap();
     const plants = response.results
       .filter((p) => p.object === "page")
       .map((p) => mapPlant(p, imageMap));
@@ -584,7 +642,8 @@ const getPlantBySlugCached = unstable_cache(
     });
 
     const page = response.results.find((p) => p.object === "page");
-    return page ? mapPlant(page, readImageMap()) : null;
+    const imageMap = await readImageMap();
+    return page ? mapPlant(page, imageMap) : null;
   },
   ["notion-plant-by-slug"],
   {
@@ -688,6 +747,33 @@ const getNurseryProfileCached = unstable_cache(
     };
   },
   ["notion-nursery-profile"],
+  {
+    revalidate: CACHE_REVALIDATE_SECONDS,
+    tags: [PLANTS_REVALIDATE_TAG],
+  }
+);
+
+const getNurseryAboutCached = unstable_cache(
+  async (): Promise<NurseryAbout> => {
+    const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
+
+    const children = await notionLegacy.request<NotionBlocksResponse>({
+      path: `blocks/${pageId}/children?page_size=50`,
+      method: "get",
+    });
+
+    const blocks = children.results ?? [];
+
+    return {
+      title: "Sobre Nuestro Vivero",
+      body:
+        getSectionBodyAfterHeading(blocks, "Sobre Nosotros") ||
+        getSectionBodyAfterHeading(blocks, "Sobre nuestro vivero") ||
+        blocks.map(getParagraphText).find(Boolean) ||
+        "",
+    };
+  },
+  ["notion-nursery-about"],
   {
     revalidate: CACHE_REVALIDATE_SECONDS,
     tags: [PLANTS_REVALIDATE_TAG],
