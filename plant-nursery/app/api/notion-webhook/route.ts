@@ -142,10 +142,17 @@ export async function POST(request: NextRequest) {
 
   const pageId = payload?.entity?.id;
   const eventType = payload?.type ?? "";
+  if (process.env.DEBUG_NOTION_WEBHOOK === "1") {
+    console.log("[notion-webhook] parsed payload", { eventType, pageId });
+  }
 
   if (
     pageId &&
-    (eventType === "page.created" || eventType === "page.content_updated")
+    (
+      eventType === "page.created" ||
+      eventType === "page.content_updated" ||
+      eventType === "page.properties_updated"
+    )
   ) {
     try {
       await syncPageImages(pageId);
