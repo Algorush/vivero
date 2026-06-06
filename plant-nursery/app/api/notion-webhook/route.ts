@@ -143,7 +143,10 @@ export async function POST(request: NextRequest) {
   const pageId = payload?.entity?.id;
   const eventType = payload?.type ?? "";
 
-  if (pageId && (eventType === "page.updated" || eventType === "page.created")) {
+  if (
+    pageId &&
+    (eventType === "page.created" || eventType === "page.content_updated")
+  ) {
     try {
       await syncPageImages(pageId);
       revalidateTag(PLANTS_REVALIDATE_TAG, "max");
