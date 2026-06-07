@@ -109,7 +109,7 @@ async function syncPageImages(pageId: string): Promise<void> {
 // --- Route handler -----------------------------------------------------------
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const signature = request.headers.get("notion-signature") ?? "";
+  const signature = request.headers.get("x-notion-signature") ?? "";
 
   let payload: { type?: string; entity?: { id?: string }; verification_token?: string };
   try {

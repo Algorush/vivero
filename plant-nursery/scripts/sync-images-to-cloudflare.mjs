@@ -233,7 +233,7 @@ async function syncPlant(page, map) {
 }
 
 // --- Main --------------------------------------------------------------------
-async function main() {
+export async function main() {
   console.log("Fetching plants from Notion...");
   const plants = await fetchAllPlants();
   console.log(`Found ${plants.length} plants.\n`);
@@ -251,9 +251,13 @@ async function main() {
   await saveMap(map);
   console.log(`\nDone. Updated ${updatedCount}/${plants.length} plants.`);
   console.log(`Image map saved to: ${IMAGE_MAP_PATH}`);
+  return { total: plants.length, updated: updatedCount };
 }
 
-main().catch((err) => {
-  console.error(`Sync failed: ${err.message}`);
-  process.exitCode = 1;
-});
+// Run directly when called as a script
+if (process.argv[1] && new URL(import.meta.url).pathname === new URL(process.argv[1], import.meta.url).pathname) {
+  main().catch((err) => {
+    console.error(`Sync failed: ${err.message}`);
+    process.exitCode = 1;
+  });
+}
