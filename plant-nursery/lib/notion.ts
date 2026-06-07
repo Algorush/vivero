@@ -2,6 +2,7 @@ import { Client } from "@notionhq/client";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { unstable_cache } from "next/cache";
+import MiniSearch from "minisearch";
 import type { Plant } from "@/types/plant";
 import { readImageMap, type ImageMap } from "./image-map";
 
@@ -148,6 +149,35 @@ function normalizeSearchText(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+}
+
+// --- MiniSearch index (module-level singleton, rebuilt when plants cache refreshes) ---
+let searchIndex: MiniSearch<Plant> | null = null;
+let searchIndexPlantIds: string | null = null;
+
+function buildSearchIndex(plants: Plant[]): MiniSearch<Plant> {
+  const index = new MiniSearch<Plant>({
+    fields: ["name", "category", "description", "flor", "riego", "suelo", "florece", "exposicion", "fruta", "tamano"],
+    storeFields: ["id"],
+    searchOptions: {
+      boost: { name: 3, category: 2 },
+      fuzzy: 0.2,
+      prefix: true,
+    },
+    processTerm: (term) =>
+      term.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+  });
+  index.addAll(plants);
+  return index;
+}
+
+function getOrBuildSearchIndex(plants: Plant[]): MiniSearch<Plant> {
+  const fingerprint = plants.map((p) => p.id).join(",");
+  if (!searchIndex || searchIndexPlantIds !== fingerprint) {
+    searchIndex = buildSearchIndex(plants);
+    searchIndexPlantIds = fingerprint;
+  }
+  return searchIndex;
 }
 
 function parseOffsetCursor(cursor: string): number {
@@ -490,47 +520,34 @@ export async function getPlantsPage(
 
   // Use in-memory full-list filtering when any text search or nativo filter is active.
   if (query || nativo !== undefined) {
-    const normalizedQuery = normalizeSearchText(query);
     const normalizedCategory = normalizeSearchText(category);
+    const allPlants = await getPlantsCached();
 
-    const filteredPlants = (await getPlantsCached()).filter((plant) => {
-      if (
-        category &&
-        normalizeSearchText(plant.category ?? "") !== normalizedCategory
-      ) {
-        return false;
-      }
+    let candidates: Plant[];
 
-      if (nativo !== undefined && plant.nativo !== nativo) {
-        return false;
-      }
-
-      if (normalizedQuery) {
-        const searchableText = [
-          plant.name,
-          plant.category,
-          plant.description,
-          plant.flor,
-          plant.riego,
-          plant.suelo,
-          plant.florece,
-          plant.exposicion,
-          plant.fruta,
-          plant.tamano,
-        ]
-          .map((value) => normalizeSearchText(value ?? ""))
-          .join(" ");
-
-        if (!searchableText.includes(normalizedQuery)) return false;
-      }
-
-      return true;
-    });
+    if (query) {
+      const index = getOrBuildSearchIndex(allPlants);
+      const results = index.search(query);
+      candidates = results
+        .map((r) => allPlants.find((p) => p.id === r.id))
+        .filter((p): p is Plant => p !== undefined)
+        .filter((plant) => {
+          if (category && normalizeSearchText(plant.category ?? "") !== normalizedCategory) return false;
+          if (nativo !== undefined && plant.nativo !== nativo) return false;
+          return true;
+        });
+    } else {
+      candidates = allPlants.filter((plant) => {
+        if (category && normalizeSearchText(plant.category ?? "") !== normalizedCategory) return false;
+        if (nativo !== undefined && plant.nativo !== nativo) return false;
+        return true;
+      });
+    }
 
     const startIndex = parseOffsetCursor(cursor);
-    const plants = filteredPlants.slice(startIndex, startIndex + pageSize);
+    const plants = candidates.slice(startIndex, startIndex + pageSize);
     const nextIndex = startIndex + plants.length;
-    const hasMore = nextIndex < filteredPlants.length;
+    const hasMore = nextIndex < candidates.length;
 
     return {
       plants,
