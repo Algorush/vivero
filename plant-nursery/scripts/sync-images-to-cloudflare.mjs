@@ -255,9 +255,7 @@ export async function main() {
 }
 
 // Run directly when called as a script
-if (process.argv[1] && new URL(import.meta.url).pathname === new URL(process.argv[1], import.meta.url).pathname) {
-  main().catch((err) => {
-    console.error(`Sync failed: ${err.message}`);
-    process.exitCode = 1;
-  });
-}
+main().catch((err) => {
+  console.error(`Sync failed: ${err.message}`);
+  process.exitCode = 1;
+});
