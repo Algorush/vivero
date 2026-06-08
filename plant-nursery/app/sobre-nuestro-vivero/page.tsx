@@ -51,9 +51,6 @@ export default async function SobreNuestroViveroPage() {
             <Link href="/" className="mapuche-button-primary">
               Ver catálogo
             </Link>
-            <Link href="/" className="mapuche-button-secondary">
-              Volver al inicio
-            </Link>
           </div>
         </div>
       </section>

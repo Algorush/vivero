@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
@@ -61,16 +62,20 @@ export default function PlantCatalog({
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // Restore state from URL on popstate (back/forward navigation)
   useEffect(() => {
-    setActiveCategory(initialCategory);
-    setSearchInput(initialQuery);
-    setActiveQuery(initialQuery);
-    setActiveNativo(initialNativo);
-    setPage(initialPage);
-    setFilterError("");
-    setIsFilterLoading(false);
-  }, [initialCategory, initialPage, initialNativo, initialQuery]);
+    const urlQuery = searchParams.get("q") ?? "";
+    const urlCategory = searchParams.get("category") ?? "";
+    const urlNativoRaw = searchParams.get("nativo");
+    const urlNativo = urlNativoRaw === "true" ? true : urlNativoRaw === "false" ? false : undefined;
+    setSearchInput(urlQuery);
+    setActiveQuery(urlQuery);
+    setActiveCategory(urlCategory);
+    setActiveNativo(urlNativo);
+  }, [searchParams]);
 
   const applyFilters = useCallback(async (nextCategory: string, rawQuery: string, nextNativo: boolean | undefined) => {
     const nextQuery = rawQuery.trim();
@@ -124,13 +129,7 @@ export default function PlantCatalog({
       setActiveNativo(nextNativo);
       setPage(data);
 
-      if (typeof window !== "undefined") {
-        window.history.replaceState(
-          {},
-          "",
-          createFilterUrl(nextCategory, nextQuery, nextNativo)
-        );
-      }
+      router.replace(createFilterUrl(nextCategory, nextQuery, nextNativo), { scroll: false });
     } catch (error) {
       if (requestIdRef.current !== requestId) {
         return;
@@ -146,7 +145,7 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, [activeCategory, activeQuery, activeNativo]);
+  }, [activeCategory, activeQuery, activeNativo, router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
