@@ -12,13 +12,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { main } = (await import(
+    // 1. Sync images to R2
+    const { main: syncImages } = (await import(
       "../../../../scripts/sync-images-to-cloudflare.mjs" as string
     )) as { main: () => Promise<{ total: number; updated: number }> };
+    const imageResult = await syncImages();
 
-    const result = await main();
+    // 2. Sync plants to Postgres (if NEON_DATABASE_URL configured)
+    let dbResult: { total: number; upserted: number; embeddingsGenerated: number } | null = null;
+    if (process.env.NEON_DATABASE_URL) {
+      const { main: syncDb } = (await import(
+        "../../../../scripts/sync-db.mjs" as string
+      )) as { main: () => Promise<{ total: number; upserted: number; embeddingsGenerated: number }> };
+      dbResult = await syncDb();
+    }
+
     revalidateTag(PLANTS_REVALIDATE_TAG, "max");
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, images: imageResult, db: dbResult });
   } catch (err) {
     console.error("[cron/sync] Error:", err);
     return NextResponse.json(
@@ -27,3 +37,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

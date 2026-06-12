@@ -518,7 +518,21 @@ export async function getPlantsPage(
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
   const nativo = options.nativo;
 
-  // Use in-memory full-list filtering when any text search or nativo filter is active.
+  // Use Postgres if NEON_DATABASE_URL is configured
+  if (process.env.NEON_DATABASE_URL) {
+    const { searchPlants } = await import("./db/search");
+    const offset = parseOffsetCursor(cursor);
+    const result = await searchPlants({ query, category, nativo, limit: pageSize, offset });
+    const nextOffset = offset + result.plants.length;
+    const hasMore = nextOffset < result.total;
+    return {
+      plants: result.plants,
+      nextCursor: hasMore ? `offset:${nextOffset}` : null,
+      hasMore,
+    };
+  }
+
+  // Fallback: in-memory MiniSearch
   if (query || nativo !== undefined) {
     const normalizedCategory = normalizeSearchText(category);
     const allPlants = await getPlantsCached();
@@ -565,6 +579,10 @@ export async function getPlantsPage(
 
 // Returns unique sorted plant categories.
 export async function getPlantCategories(): Promise<string[]> {
+  if (process.env.NEON_DATABASE_URL) {
+    const { getCategories } = await import("./db/search");
+    return getCategories();
+  }
   const plants = await getPlantsCached();
   return Array.from(
     new Set(
@@ -577,6 +595,10 @@ export async function getPlantCategories(): Promise<string[]> {
 
 // Returns one plant by slug.
 export async function getPlantBySlug(slug: string): Promise<Plant | null> {
+  if (process.env.NEON_DATABASE_URL) {
+    const { getPlantBySlugFromDb } = await import("./db/search");
+    return getPlantBySlugFromDb(slug.trim());
+  }
   return getPlantBySlugCached(slug.trim());
 }
 
@@ -796,3 +818,4 @@ const getNurseryAboutCached = unstable_cache(
     tags: [PLANTS_REVALIDATE_TAG],
   }
 );
+
