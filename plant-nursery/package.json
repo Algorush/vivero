@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "set TURBOPACK_MAX_THREADS=2 && next dev",
+    "dev": "set TURBOPACK_MAX_THREADS=2 && next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "sync:notion-images": "node scripts/download-notion-images.mjs",
     "sync:cloudflare": "node scripts/sync-images-to-cloudflare.mjs",
     "sync:db": "tsx scripts/sync-db.mjs",
+    "upload:model": "node scripts/upload-model-to-r2.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "import:notion-plants": "node scripts/import-plants-from-csv.mjs"

@@ -62,8 +62,16 @@ export default function PlantCatalog({
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
+  const activeCategoryRef = useRef(activeCategory);
+  const activeQueryRef = useRef(activeQuery);
+  const activeNativoRef = useRef(activeNativo);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Keep refs in sync with state
+  useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
+  useEffect(() => { activeQueryRef.current = activeQuery; }, [activeQuery]);
+  useEffect(() => { activeNativoRef.current = activeNativo; }, [activeNativo]);
 
   // Restore state from URL on popstate (back/forward navigation)
   useEffect(() => {
@@ -81,9 +89,9 @@ export default function PlantCatalog({
     const nextQuery = rawQuery.trim();
 
     if (
-      normalize(nextCategory) === normalize(activeCategory) &&
-      nextQuery === activeQuery &&
-      nextNativo === activeNativo
+      normalize(nextCategory) === normalize(activeCategoryRef.current) &&
+      nextQuery === activeQueryRef.current &&
+      nextNativo === activeNativoRef.current
     ) {
       return;
     }
@@ -145,12 +153,12 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, [activeCategory, activeQuery, activeNativo, router]);
+  }, [router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void applyFilters(activeCategory, searchInput, activeNativo);
-    }, 320);
+    }, 400);
 
     return () => {
       window.clearTimeout(timer);

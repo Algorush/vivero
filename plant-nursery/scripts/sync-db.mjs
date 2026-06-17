@@ -14,7 +14,6 @@ import path from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
-import OpenAI from "openai";
 
 // Fix fetch for Node.js (neon serverless needs it globally available)
 import { plants } from "../lib/db/schema.ts";
@@ -72,8 +71,6 @@ const notion = new Client({
 
 const sql = neon(process.env.NEON_DATABASE_URL);
 const db = drizzle(sql, { schema: { plants } });
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // --- Helpers -----------------------------------------------------------------
 function slugify(value) {
@@ -153,11 +150,9 @@ function buildEmbeddingText(plant) {
 }
 
 async function generateEmbedding(text) {
-  const response = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text.slice(0, 8000), // max tokens safety
-  });
-  return response.data[0].embedding;
+  // Use local model via @huggingface/transformers (no API calls)
+  const { generateEmbedding: localEmbed } = await import("../lib/embeddings.ts");
+  return localEmbed(text);
 }
 
 // --- Migrate (ensure schema) -------------------------------------------------
@@ -185,7 +180,7 @@ async function ensureSchema() {
       images JSONB NOT NULL DEFAULT '[]'::jsonb,
       notion_updated_at TIMESTAMPTZ,
       synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      embedding vector(1536),
+      embedding vector(384),
       embedding_updated_at TIMESTAMPTZ
     )
   `;
@@ -194,8 +189,25 @@ async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS plants_nativo_idx ON plants(nativo)`;
   await sql`CREATE INDEX IF NOT EXISTS plants_available_idx ON plants(available)`;
 
+  // Migrate embedding column if dimensions changed (e.g. 1536 → 384)
+  // atttypmod for vector(N) = N + 4
+  const colInfo = await sql`
+    SELECT atttypmod FROM pg_attribute
+    WHERE attrelid = 'plants'::regclass AND attname = 'embedding' AND attnum > 0
+  `;
+  const currentMod = Number(colInfo[0]?.atttypmod ?? -1);
+  const expectedMod = 384 + 4; // 388
+  if (currentMod !== -1 && currentMod !== expectedMod) {
+    console.log(`Migrating embedding column (${currentMod - 4} → 384 dims)...`);
+    await sql`DROP INDEX IF EXISTS plants_embedding_idx`;
+    await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding`;
+    await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding_updated_at`;
+    await sql`ALTER TABLE plants ADD COLUMN embedding vector(384)`;
+    await sql`ALTER TABLE plants ADD COLUMN embedding_updated_at TIMESTAMPTZ`;
+    console.log("Migration done. All embeddings will be regenerated.");
+  }
+
   // IVFFlat index for fast approximate nearest neighbor search
-  // (created only if table has data)
   const count = await sql`SELECT COUNT(*) FROM plants`;
   if (Number(count[0].count) > 10) {
     await sql`CREATE INDEX IF NOT EXISTS plants_embedding_idx ON plants USING ivfflat (embedding vector_cosine_ops) WITH (lists = 10)`;
@@ -293,20 +305,27 @@ export async function main() {
         !existing[0]?.embeddingUpdatedAt ||
         existing[0]?.name !== plantData.name;
 
-      if (needsEmbedding && process.env.OPENAI_API_KEY) {
+      if (needsEmbedding) {
         const embeddingText = buildEmbeddingText(plantData);
         if (embeddingText.trim()) {
-          process.stdout.write(`  generating embedding for "${plantData.name}"... `);
-          const embedding = await generateEmbedding(embeddingText);
-          // Use raw SQL to set vector column (Drizzle doesn't natively support pgvector yet)
-          await sql`
-            UPDATE plants
-            SET embedding = ${`[${embedding.join(",")}]`}::vector,
-                embedding_updated_at = NOW()
-            WHERE id = ${page.id}
-          `;
-          embeddingsGenerated++;
-          console.log("ok");
+          if (!process.env.HUGGINGFACE_API_KEY) {
+            // Skip embeddings silently if API key not available
+          } else {
+            process.stdout.write(`  generating embedding for "${plantData.name}"... `);
+            try {
+              const embedding = await generateEmbedding(embeddingText);
+              await sql`
+                UPDATE plants
+                SET embedding = ${`[${embedding.join(",")}]`}::vector,
+                    embedding_updated_at = NOW()
+                WHERE id = ${page.id}
+              `;
+              embeddingsGenerated++;
+              console.log("ok");
+            } catch (embErr) {
+              console.log(`skipped (${embErr.message.slice(0, 60)})`);
+            }
+          }
         }
       }
 

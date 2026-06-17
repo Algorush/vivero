@@ -7,6 +7,9 @@ function getSql() {
   return neon(url);
 }
 
+// In-memory cache for query embeddings (keyed by normalized query text)
+const embeddingCache = new Map<string, number[]>();
+
 type SearchOptions = {
   query?: string;
   category?: string;
@@ -85,10 +88,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     };
   }
 
-  // Semantic search with pgvector if embedding available, fallback to FTS
-  const hasEmbedding = !!process.env.OPENAI_API_KEY;
-
-  if (hasEmbedding) {
+  // Semantic search with pgvector if HF API key is set, fallback to FTS
+  if (process.env.HUGGINGFACE_API_KEY) {
     return semanticSearch(sql, query, { category, nativo, limit, offset });
   }
 
@@ -100,15 +101,16 @@ async function semanticSearch(
   query: string,
   options: { category?: string; nativo?: boolean; limit: number; offset: number }
 ): Promise<SearchResult> {
-  // Generate query embedding via OpenAI
-  const { default: OpenAI } = await import("openai");
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  // Generate query embedding using local model, with in-memory cache
+  const cacheKey = query.slice(0, 512).toLowerCase().trim();
+  let embedding = embeddingCache.get(cacheKey);
 
-  const embeddingResponse = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: query.slice(0, 8000),
-  });
-  const embedding = embeddingResponse.data[0].embedding;
+  if (!embedding) {
+    const { generateEmbedding } = await import("../embeddings");
+    embedding = await generateEmbedding(cacheKey);
+    embeddingCache.set(cacheKey, embedding);
+  }
+
   const vectorStr = `[${embedding.join(",")}]`;
 
   const conditions: string[] = ["available = true", "embedding IS NOT NULL"];
