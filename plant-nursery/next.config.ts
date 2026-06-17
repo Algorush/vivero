@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   // Dev convenience: allow all 192.168.x.78 LAN addresses.
   allowedDevOrigins: ["192.168.71.78"],
-  serverExternalPackages: ["sharp"],
+  serverExternalPackages: ["sharp", "drizzle-orm", "@neondatabase/serverless", "@aws-sdk/client-s3"],
   images: {
     unoptimized: true,
   },

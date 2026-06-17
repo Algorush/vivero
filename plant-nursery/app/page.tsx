@@ -11,6 +11,7 @@ type HomeProps = {
     category?: string;
     cursor?: string;
     q?: string;
+    nativo?: string;
   }>;
 };
 
@@ -19,11 +20,12 @@ function sanitizePhoneToWa(value: string): string {
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { category, cursor, q } = await searchParams;
+  const { category, cursor, q, nativo } = await searchParams;
 
   const activeCategory = category?.trim() || "";
   const activeCursor = cursor?.trim() || "";
   const activeQuery = q?.trim() || "";
+  const activeNativo = nativo === "true" ? true : nativo === "false" ? false : undefined;
 
   const [nurseryProfile, categories, plantsPage] = await Promise.all([
     getNurseryProfile(),
@@ -32,6 +34,7 @@ export default async function Home({ searchParams }: HomeProps) {
       category: activeCategory || undefined,
       cursor: activeCursor || undefined,
       query: activeQuery || undefined,
+      nativo: activeNativo,
       pageSize: 12,
     }),
   ]);
@@ -155,6 +158,7 @@ plantas nativas y exóticas
           categories={categories}
           initialCategory={activeCategory}
           initialQuery={activeQuery}
+          initialNativo={activeNativo}
           initialPage={plantsPage}
         />
       </div>

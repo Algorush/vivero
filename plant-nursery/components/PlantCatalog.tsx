@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
@@ -61,24 +62,36 @@ export default function PlantCatalog({
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
+  const activeCategoryRef = useRef(activeCategory);
+  const activeQueryRef = useRef(activeQuery);
+  const activeNativoRef = useRef(activeNativo);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // Keep refs in sync with state
+  useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
+  useEffect(() => { activeQueryRef.current = activeQuery; }, [activeQuery]);
+  useEffect(() => { activeNativoRef.current = activeNativo; }, [activeNativo]);
+
+  // Restore state from URL on popstate (back/forward navigation)
   useEffect(() => {
-    setActiveCategory(initialCategory);
-    setSearchInput(initialQuery);
-    setActiveQuery(initialQuery);
-    setActiveNativo(initialNativo);
-    setPage(initialPage);
-    setFilterError("");
-    setIsFilterLoading(false);
-  }, [initialCategory, initialPage, initialNativo, initialQuery]);
+    const urlQuery = searchParams.get("q") ?? "";
+    const urlCategory = searchParams.get("category") ?? "";
+    const urlNativoRaw = searchParams.get("nativo");
+    const urlNativo = urlNativoRaw === "true" ? true : urlNativoRaw === "false" ? false : undefined;
+    setSearchInput(urlQuery);
+    setActiveQuery(urlQuery);
+    setActiveCategory(urlCategory);
+    setActiveNativo(urlNativo);
+  }, [searchParams]);
 
   const applyFilters = useCallback(async (nextCategory: string, rawQuery: string, nextNativo: boolean | undefined) => {
     const nextQuery = rawQuery.trim();
 
     if (
-      normalize(nextCategory) === normalize(activeCategory) &&
-      nextQuery === activeQuery &&
-      nextNativo === activeNativo
+      normalize(nextCategory) === normalize(activeCategoryRef.current) &&
+      nextQuery === activeQueryRef.current &&
+      nextNativo === activeNativoRef.current
     ) {
       return;
     }
@@ -124,13 +137,7 @@ export default function PlantCatalog({
       setActiveNativo(nextNativo);
       setPage(data);
 
-      if (typeof window !== "undefined") {
-        window.history.replaceState(
-          {},
-          "",
-          createFilterUrl(nextCategory, nextQuery, nextNativo)
-        );
-      }
+      router.replace(createFilterUrl(nextCategory, nextQuery, nextNativo), { scroll: false });
     } catch (error) {
       if (requestIdRef.current !== requestId) {
         return;
@@ -146,12 +153,12 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, [activeCategory, activeQuery, activeNativo]);
+  }, [router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void applyFilters(activeCategory, searchInput, activeNativo);
-    }, 320);
+    }, 400);
 
     return () => {
       window.clearTimeout(timer);
@@ -189,82 +196,64 @@ export default function PlantCatalog({
 
   return (
     <>
-      <div className="sticky top-2 z-20 mb-8">
-        <div className="mapuche-paper-surface -mx-2 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:py-4 md:shadow-none md:backdrop-blur-0">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-[#1f1a17] md:text-xl">Catalogo</h2>
-                {catalogLabel ? (
-                  <span className="text-lg font-medium text-[#8b4f35]">
-                    {catalogLabel}
-                  </span>
-                ) : null}
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleNativo(true)}
-                    disabled={isFilterLoading}
-                    className={`mapuche-chip shrink-0 ${
-                      activeNativo === true ? "mapuche-chip-active" : "mapuche-chip-idle"
-                    } disabled:cursor-wait disabled:opacity-70`}
-                    aria-pressed={activeNativo === true}
-                  >
-                    🌿 Nativas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleNativo(false)}
-                    disabled={isFilterLoading}
-                    className={`mapuche-chip shrink-0 ${
-                      activeNativo === false ? "mapuche-chip-active" : "mapuche-chip-idle"
-                    } disabled:cursor-wait disabled:opacity-70`}
-                    aria-pressed={activeNativo === false}
-                  >
-                    🌺 Exóticas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void applyFilters(activeCategory, searchInput, undefined)}
-                    disabled={isFilterLoading}
-                    className={`mapuche-chip shrink-0 ${
-                      activeNativo === undefined ? "mapuche-chip-active" : "mapuche-chip-idle"
-                    } disabled:cursor-wait disabled:opacity-70`}
-                    aria-pressed={activeNativo === undefined}
-                  >
-                    Todas
-                  </button>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-500">{categories.length + 1} filtros disponibles</p>
-            </div>
-          </div>
+      <div className="sticky top-2 z-20 mb-6">
+        <div className="mapuche-paper-surface -mx-2 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:shadow-none md:backdrop-blur-0">
 
-          <div className="mb-3">
+          {/* Row 1: title + search */}
+          <div className="mb-2 flex items-center gap-2">
+            <h2 className="shrink-0 text-base font-semibold text-[#1f1a17] md:text-lg">
+              {catalogLabel ? (
+                <span className="ml-1.5 font-medium text-[#8b4f35]">{catalogLabel}</span>
+              ) : null}
+            </h2>
             <input
               type="search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Buscar por nombre, descripcion, flor, riego..."
-              className="w-full rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-2 text-sm text-[#1f1a17] placeholder:text-zinc-500 focus:border-[#2f5f4f] focus:outline-none"
+              placeholder="Buscar planta..."
+              className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
               aria-label="Buscar plantas"
             />
           </div>
 
-          <div className="pt-2">
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button
-                type="button"
-                onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters("", searchInput, activeNativo); })}
-                onClick={() => handleFilterClick(() => { void applyFilters("", searchInput, activeNativo); })}
-                disabled={isFilterLoading}
-                className={`mapuche-chip shrink-0 ${
-                  !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
-                } disabled:cursor-wait disabled:opacity-70`}
-                aria-pressed={!activeCategory}
-              >
-                Todas
-              </button>
+          {/* Row 2: nativo toggles + category chips in single scrollable row */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              onClick={() => toggleNativo(true)}
+              disabled={isFilterLoading}
+              className={`mapuche-chip shrink-0 ${
+                activeNativo === true ? "mapuche-chip-active" : "mapuche-chip-idle"
+              } disabled:cursor-wait disabled:opacity-70`}
+              aria-pressed={activeNativo === true}
+            >
+              🌿 Nativas
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleNativo(false)}
+              disabled={isFilterLoading}
+              className={`mapuche-chip shrink-0 ${
+                activeNativo === false ? "mapuche-chip-active" : "mapuche-chip-idle"
+              } disabled:cursor-wait disabled:opacity-70`}
+              aria-pressed={activeNativo === false}
+            >
+              🌺 Exóticas
+            </button>
+            {/* divider */}
+            <span className="mx-0.5 self-center text-[#d8c0a0]">|</span>
+            <button
+              type="button"
+              onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters("", searchInput, activeNativo); })}
+              onClick={() => handleFilterClick(() => { void applyFilters("", searchInput, activeNativo); })}
+              disabled={isFilterLoading}
+              className={`mapuche-chip shrink-0 ${
+                !activeCategory ? "mapuche-chip-active" : "mapuche-chip-idle"
+              } disabled:cursor-wait disabled:opacity-70`}
+              aria-pressed={!activeCategory}
+            >
+              Todas
+            </button>
 
               {categories.map((category) => {
                 const isActive = normalize(activeCategory) === normalize(category);
@@ -285,7 +274,6 @@ export default function PlantCatalog({
                   </button>
                 );
               })}
-            </div>
           </div>
 
         </div>
