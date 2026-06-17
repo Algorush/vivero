@@ -214,13 +214,19 @@ async function ilikeFallback(
   options: { category?: string; nativo?: boolean; limit: number; offset: number }
 ): Promise<SearchResult> {
   const sql = getSql();
-  const pattern = `%${query}%`;
+
+  // Search each word independently across all text fields
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  const allFields = `(name || ' ' || description || ' ' || category || ' ' || flor || ' ' || riego || ' ' || suelo || ' ' || exposicion || ' ' || fruta || ' ' || tamano)`;
+  const wordConditions = words.map((_, i) => `${allFields} ILIKE $${i + 1}`);
+  const wordParams = words.map((w) => `%${w}%`);
+
   const conditions: string[] = [
     "available = true",
-    `(name ILIKE $1 OR description ILIKE $1 OR category ILIKE $1 OR flor ILIKE $1)`,
+    `(${wordConditions.join(" AND ")})`,
   ];
-  const params: unknown[] = [pattern];
-  let paramIndex = 2;
+  const params: unknown[] = [...wordParams];
+  let paramIndex = words.length + 1;
 
   if (options.category) {
     conditions.push(`category = $${paramIndex++}`);
