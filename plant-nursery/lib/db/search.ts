@@ -92,9 +92,13 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     };
   }
 
-  // Semantic search with pgvector if HF API key is set, fallback to FTS
+  // Semantic search with pgvector if HF API key is set, fallback to FTS on any error
   if (process.env.HUGGINGFACE_API_KEY) {
-    return semanticSearch(query, { category, nativo, limit, offset });
+    try {
+      return await semanticSearch(query, { category, nativo, limit, offset });
+    } catch (err) {
+      console.warn("[search] semantic search failed, falling back to FTS:", (err as Error).message);
+    }
   }
 
   return fullTextSearch(query, { category, nativo, limit, offset });
