@@ -79,9 +79,14 @@ export async function readImageMap(): Promise<ImageMap> {
 }
 
 export async function writeImageMap(map: ImageMap): Promise<void> {
-  const dir = path.dirname(IMAGE_MAP_PATH);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(IMAGE_MAP_PATH, JSON.stringify(map, null, 2));
+  const json = JSON.stringify(map, null, 2);
+
+  // Only write to local disk in non-serverless environments
+  if (!process.env.VERCEL) {
+    const dir = path.dirname(IMAGE_MAP_PATH);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(IMAGE_MAP_PATH, json);
+  }
 
   const client = getR2Client();
   const bucket = process.env.CLOUDFLARE_R2_BUCKET;
@@ -94,7 +99,7 @@ export async function writeImageMap(map: ImageMap): Promise<void> {
     new PutObjectCommand({
       Bucket: bucket,
       Key: IMAGE_MAP_KEY,
-      Body: JSON.stringify(map, null, 2),
+      Body: json,
       ContentType: "application/json",
     })
   );
