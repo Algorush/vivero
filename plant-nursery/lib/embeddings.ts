@@ -6,7 +6,7 @@
  */
 
 const HF_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2";
-const HF_API_URL = "https://router.huggingface.co/hf-inference/v1/embeddings";
+const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}/pipeline/feature-extraction`;
 
 export const EMBEDDING_DIMS = 384;
 
@@ -32,7 +32,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: HF_MODEL, inputs: key }),
+    body: JSON.stringify({ inputs: key }),
   });
 
   if (!res.ok) {
@@ -40,11 +40,23 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error(`HuggingFace API ${res.status}: ${body.slice(0, 200)}`);
   }
 
-  // OpenAI-compatible response: { data: [{ embedding: number[] }] }
-  const json = await res.json() as { data?: Array<{ embedding: number[] }> };
-  const embedding = json.data?.[0]?.embedding;
+  // feature-extraction returns either:
+  //   2D array [tokens × dims]  → need mean pooling
+  //   1D array [dims]           → already pooled
+  const data = await res.json() as number[][] | number[];
+  let embedding: number[];
 
-  if (!embedding) throw new Error("HuggingFace API returned no embedding");
+  if (Array.isArray(data[0])) {
+    const matrix = data as number[][];
+    const dims = matrix[0].length;
+    embedding = new Array<number>(dims).fill(0);
+    for (const token of matrix) {
+      for (let i = 0; i < dims; i++) embedding[i] += token[i];
+    }
+    for (let i = 0; i < dims; i++) embedding[i] /= matrix.length;
+  } else {
+    embedding = data as number[];
+  }
 
   embeddingCache.set(key, embedding);
   return embedding;
