@@ -64,6 +64,12 @@ export default async function PlantPage({ params }: PlantPageProps) {
         Categoría: {plant.category}
       </p>
 
+      {plant.price > 0 && (
+        <p className="mb-2 text-lg font-semibold text-green-700">
+          Precio: ${plant.price}
+        </p>
+      )}
+
       <p className="whitespace-pre-line">{plant.description}</p>
 
       {details.length > 0 && (

@@ -2,14 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Client } from "@notionhq/client";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 
 import { PLANTS_REVALIDATE_TAG } from "@/lib/notion";
 import { readImageMap, writeImageMap } from "@/lib/image-map";
+import { plants } from "@/lib/db/schema";
 
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
   notionVersion: "2022-06-28",
 });
+
+const db = process.env.NEON_DATABASE_URL
+  ? drizzle(neon(process.env.NEON_DATABASE_URL), { schema: { plants } })
+  : null;
 
 // --- Helpers -----------------------------------------------------------------
 function slugify(value: string): string {
@@ -24,6 +31,125 @@ function slugify(value: string): string {
 
 function textOf(items?: Array<{ plain_text?: string }>): string {
   return (items ?? []).map((i) => i?.plain_text ?? "").join("").trim();
+}
+
+async function fetchPage(pageId: string): Promise<{
+  object: string;
+  id: string;
+  properties: {
+    Slug?: { rich_text?: Array<{ plain_text?: string }> };
+    Title?: { title?: Array<{ plain_text?: string }> };
+    Description?: { rich_text?: Array<{ plain_text?: string }> };
+    Flor?: { rich_text?: Array<{ plain_text?: string }> };
+    Riego?: { rich_text?: Array<{ plain_text?: string }> };
+    Suelo?: { rich_text?: Array<{ plain_text?: string }> };
+    Florece?: { rich_text?: Array<{ plain_text?: string }> };
+    Exposicion?: { rich_text?: Array<{ plain_text?: string }> };
+    Fruta?: { rich_text?: Array<{ plain_text?: string }> };
+    Tamano?: { rich_text?: Array<{ plain_text?: string }> };
+    Category?: { select?: { name?: string } | null };
+    Nativo?: { checkbox?: boolean };
+    Price?: { number?: number | null };
+    Amount?: { number?: number | null };
+    Available?: { checkbox?: boolean };
+    Image?: { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> };
+  };
+}> {
+  const page = await notion.request<{
+    object: string;
+    id: string;
+    properties: {
+      Slug?: { rich_text?: Array<{ plain_text?: string }> };
+      Title?: { title?: Array<{ plain_text?: string }> };
+      Description?: { rich_text?: Array<{ plain_text?: string }> };
+      Flor?: { rich_text?: Array<{ plain_text?: string }> };
+      Riego?: { rich_text?: Array<{ plain_text?: string }> };
+      Suelo?: { rich_text?: Array<{ plain_text?: string }> };
+      Florece?: { rich_text?: Array<{ plain_text?: string }> };
+      Exposicion?: { rich_text?: Array<{ plain_text?: string }> };
+      Fruta?: { rich_text?: Array<{ plain_text?: string }> };
+      Tamano?: { rich_text?: Array<{ plain_text?: string }> };
+      Category?: { select?: { name?: string } | null };
+      Nativo?: { checkbox?: boolean };
+      Price?: { number?: number | null };
+      Amount?: { number?: number | null };
+      Available?: { checkbox?: boolean };
+      Image?: { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> };
+    };
+  }>({ path: `pages/${pageId}`, method: "get" });
+
+  return page.object === "page" ? page : null;
+}
+
+function mapPageToPlant(
+  page: NonNullable<Awaited<ReturnType<typeof fetchPage>>>,
+  imageMap: Record<string, { cdn?: string[] }>
+) {
+  const slug =
+    slugify(textOf(page.properties?.Slug?.rich_text)) ||
+    slugify(textOf(page.properties?.Title?.title)) ||
+    page.id;
+
+  return {
+    id: page.id,
+    slug,
+    name: textOf(page.properties?.Title?.title),
+    description: textOf(page.properties?.Description?.rich_text),
+    flor: textOf(page.properties?.Flor?.rich_text),
+    riego: textOf(page.properties?.Riego?.rich_text),
+    suelo: textOf(page.properties?.Suelo?.rich_text),
+    florece: textOf(page.properties?.Florece?.rich_text),
+    exposicion: textOf(page.properties?.Exposicion?.rich_text),
+    fruta: textOf(page.properties?.Fruta?.rich_text),
+    tamano: textOf(page.properties?.Tamano?.rich_text),
+    category: page.properties?.Category?.select?.name || "",
+    nativo: page.properties?.Nativo?.checkbox ?? false,
+    price: page.properties?.Price?.number || 0,
+    amount: page.properties?.Amount?.number || 0,
+    available: page.properties?.Available?.checkbox ?? false,
+    images: imageMap[slug]?.cdn?.length ? imageMap[slug].cdn : [],
+    syncedAt: new Date(),
+  };
+}
+
+async function upsertPlant(pageId: string): Promise<void> {
+  if (!db) {
+    return;
+  }
+
+  const page = await fetchPage(pageId);
+  if (!page) {
+    return;
+  }
+
+  const imageMap = await readImageMap();
+  const plantData = mapPageToPlant(page, imageMap);
+
+  await db
+    .insert(plants)
+    .values(plantData)
+    .onConflictDoUpdate({
+      target: plants.id,
+      set: {
+        slug: plantData.slug,
+        name: plantData.name,
+        description: plantData.description,
+        flor: plantData.flor,
+        riego: plantData.riego,
+        suelo: plantData.suelo,
+        florece: plantData.florece,
+        exposicion: plantData.exposicion,
+        fruta: plantData.fruta,
+        tamano: plantData.tamano,
+        category: plantData.category,
+        nativo: plantData.nativo,
+        price: plantData.price,
+        amount: plantData.amount,
+        available: plantData.available,
+        images: plantData.images,
+        syncedAt: plantData.syncedAt,
+      },
+    });
 }
 
 function stableHash(url: string): string {
@@ -156,6 +282,7 @@ export async function POST(request: NextRequest) {
   ) {
     try {
       await syncPageImages(pageId);
+      await upsertPlant(pageId);
       revalidateTag(PLANTS_REVALIDATE_TAG, "max");
       console.log(`[notion-webhook] Synced page ${pageId}, cache revalidated.`);
     } catch (err) {
