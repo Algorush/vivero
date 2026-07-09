@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { Client } from "@notionhq/client";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { sql } from "drizzle-orm";
 
 import { PLANTS_REVALIDATE_TAG } from "@/lib/notion";
 import { readImageMap, writeImageMap } from "@/lib/image-map";
@@ -122,6 +123,13 @@ async function upsertPlant(pageId: string): Promise<void> {
   if (!db) {
     return;
   }
+
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''
+  `);
 
   const page = await fetchPage(pageId);
   if (!page) {
