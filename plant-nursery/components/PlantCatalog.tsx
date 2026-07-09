@@ -62,6 +62,11 @@ export default function PlantCatalog({
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
+  const pendingUrlSyncRef = useRef<{
+    category: string;
+    query: string;
+    nativo: boolean | undefined;
+  } | null>(null);
   const activeCategoryRef = useRef(activeCategory);
   const activeQueryRef = useRef(activeQuery);
   const activeNativoRef = useRef(activeNativo);
@@ -79,6 +84,18 @@ export default function PlantCatalog({
     const urlCategory = searchParams.get("category") ?? "";
     const urlNativoRaw = searchParams.get("nativo");
     const urlNativo = urlNativoRaw === "true" ? true : urlNativoRaw === "false" ? false : undefined;
+
+    const pendingUrlSync = pendingUrlSyncRef.current;
+    if (
+      pendingUrlSync &&
+      pendingUrlSync.category === urlCategory &&
+      pendingUrlSync.query === urlQuery &&
+      pendingUrlSync.nativo === urlNativo
+    ) {
+      pendingUrlSyncRef.current = null;
+      return;
+    }
+
     setSearchInput(urlQuery);
     setActiveQuery(urlQuery);
     setActiveCategory(urlCategory);
@@ -136,6 +153,12 @@ export default function PlantCatalog({
       setActiveQuery(nextQuery);
       setActiveNativo(nextNativo);
       setPage(data);
+
+      pendingUrlSyncRef.current = {
+        category: nextCategory,
+        query: nextQuery,
+        nativo: nextNativo,
+      };
 
       router.replace(createFilterUrl(nextCategory, nextQuery, nextNativo), { scroll: false });
     } catch (error) {
