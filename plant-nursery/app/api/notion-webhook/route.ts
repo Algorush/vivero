@@ -54,7 +54,7 @@ async function fetchPage(pageId: string): Promise<{
     Available?: { checkbox?: boolean };
     Image?: { files?: Array<{ file?: { url?: string }; external?: { url?: string } }> };
   };
-}> {
+} | null> {
   const page = await notion.request<{
     object: string;
     id: string;
