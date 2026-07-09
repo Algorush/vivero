@@ -33,6 +33,8 @@ export const plants = pgTable(
     exposicion: text("exposicion").notNull().default(""),
     fruta: text("fruta").notNull().default(""),
     tamano: text("tamano").notNull().default(""),
+    utilizacion: text("utilizacion").notNull().default(""),
+    propagacion: text("propagacion").notNull().default(""),
     category: text("category").notNull().default(""),
     nativo: boolean("nativo").notNull().default(false),
     price: integer("price").notNull().default(0),

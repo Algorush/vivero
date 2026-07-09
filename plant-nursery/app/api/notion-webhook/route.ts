@@ -47,6 +47,8 @@ async function fetchPage(pageId: string): Promise<{
     Exposicion?: { rich_text?: Array<{ plain_text?: string }> };
     Fruta?: { rich_text?: Array<{ plain_text?: string }> };
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
+    Utilizacion?: { rich_text?: Array<{ plain_text?: string }> };
+    Propagacion?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
     Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
@@ -69,6 +71,8 @@ async function fetchPage(pageId: string): Promise<{
       Exposicion?: { rich_text?: Array<{ plain_text?: string }> };
       Fruta?: { rich_text?: Array<{ plain_text?: string }> };
       Tamano?: { rich_text?: Array<{ plain_text?: string }> };
+      Utilizacion?: { rich_text?: Array<{ plain_text?: string }> };
+      Propagacion?: { rich_text?: Array<{ plain_text?: string }> };
       Category?: { select?: { name?: string } | null };
       Nativo?: { checkbox?: boolean };
       Price?: { number?: number | null };
@@ -102,6 +106,8 @@ function mapPageToPlant(
     exposicion: textOf(page.properties?.Exposicion?.rich_text),
     fruta: textOf(page.properties?.Fruta?.rich_text),
     tamano: textOf(page.properties?.Tamano?.rich_text),
+    utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
+    propagacion: textOf(page.properties?.Propagacion?.rich_text),
     category: page.properties?.Category?.select?.name || "",
     nativo: page.properties?.Nativo?.checkbox ?? false,
     price: page.properties?.Price?.number || 0,
@@ -141,6 +147,8 @@ async function upsertPlant(pageId: string): Promise<void> {
         exposicion: plantData.exposicion,
         fruta: plantData.fruta,
         tamano: plantData.tamano,
+        utilizacion: plantData.utilizacion,
+        propagacion: plantData.propagacion,
         category: plantData.category,
         nativo: plantData.nativo,
         price: plantData.price,

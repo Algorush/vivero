@@ -29,6 +29,8 @@ export default async function PlantPage({ params }: PlantPageProps) {
     { label: "Exposicion", value: normalizeDetailValue(plant.exposicion) },
     { label: "Fruta", value: normalizeDetailValue(plant.fruta) },
     { label: "Tamano", value: normalizeDetailValue(plant.tamano) },
+    { label: "Utilizacion", value: normalizeDetailValue(plant.utilizacion) },
+    { label: "Propagacion", value: normalizeDetailValue(plant.propagacion) },
   ].filter((item) => item.value.length > 0);
 
   return (

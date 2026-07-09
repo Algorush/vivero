@@ -41,6 +41,8 @@ function rowToPlant(row: Record<string, unknown>): Plant {
     exposicion: row.exposicion as string,
     fruta: row.fruta as string,
     tamano: row.tamano as string,
+    utilizacion: row.utilizacion as string,
+    propagacion: row.propagacion as string,
     category: row.category as string,
     nativo: row.nativo as boolean,
     price: row.price as number,

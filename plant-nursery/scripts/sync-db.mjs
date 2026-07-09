@@ -172,6 +172,8 @@ async function ensureSchema() {
       exposicion TEXT NOT NULL DEFAULT '',
       fruta TEXT NOT NULL DEFAULT '',
       tamano TEXT NOT NULL DEFAULT '',
+      utilizacion TEXT NOT NULL DEFAULT '',
+      propagacion TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
       nativo BOOLEAN NOT NULL DEFAULT false,
       price INTEGER NOT NULL DEFAULT 0,
@@ -188,6 +190,9 @@ async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS plants_category_idx ON plants(category)`;
   await sql`CREATE INDEX IF NOT EXISTS plants_nativo_idx ON plants(nativo)`;
   await sql`CREATE INDEX IF NOT EXISTS plants_available_idx ON plants(available)`;
+
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''`;
 
   // Migrate embedding column if dimensions changed (e.g. 1536 → 384)
   // atttypmod for vector(N) = N + 4
@@ -236,6 +241,8 @@ function mapNotionPageToPlant(page, imageMap) {
     exposicion: textOf(page.properties?.Exposicion?.rich_text),
     fruta: textOf(page.properties?.Fruta?.rich_text),
     tamano: textOf(page.properties?.Tamano?.rich_text),
+    utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
+    propagacion: textOf(page.properties?.Propagacion?.rich_text),
     category: page.properties?.Category?.select?.name || "",
     nativo: page.properties?.Nativo?.checkbox ?? false,
     price: page.properties?.Price?.number || 0,
@@ -282,6 +289,8 @@ export async function main() {
             exposicion: plantData.exposicion,
             fruta: plantData.fruta,
             tamano: plantData.tamano,
+            utilizacion: plantData.utilizacion,
+            propagacion: plantData.propagacion,
             category: plantData.category,
             nativo: plantData.nativo,
             price: plantData.price,

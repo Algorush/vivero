@@ -10,6 +10,8 @@ export type Plant = {
   exposicion: string;
   fruta: string;
   tamano: string;
+  utilizacion: string;
+  propagacion: string;
   category: string;
   nativo: boolean;
   price: number;
