@@ -12,6 +12,7 @@ export type Plant = {
   tamano: string;
   utilizacion: string;
   propagacion: string;
+  medicinal: string;
   category: string;
   nativo: boolean;
   price: number;

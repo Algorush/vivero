@@ -1,10 +1,32 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/notion";
 import PlantCatalog from "@/components/PlantCatalog";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
+import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 
 export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const nurseryProfile = await getNurseryProfile();
+  const title = "Vivero Karu-lemu | Plantas nativas y exoticas en catalogo online";
+  const description =
+    nurseryProfile.description?.trim() ||
+    "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu: precios, disponibilidad y caracteristicas de cada especie.";
+
+  return {
+    title,
+    description,
+    alternates: { canonical: SITE_URL },
+    openGraph: {
+      title,
+      description,
+      url: SITE_URL,
+      images: nurseryProfile.image ? [{ url: nurseryProfile.image }] : undefined,
+    },
+  };
+}
 
 type HomeProps = {
   searchParams: Promise<{
@@ -49,8 +71,27 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const mapHref = nurseryProfile.mapUrl?.trim() || "";
 
+  const localBusinessJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "GardenStore",
+    name: SITE_NAME,
+    description: nurseryProfile.description || undefined,
+    url: SITE_URL,
+    image: nurseryProfile.image || undefined,
+    telephone: nurseryProfile.phone || undefined,
+    address: nurseryProfile.location
+      ? { "@type": "PostalAddress", addressLocality: nurseryProfile.location }
+      : undefined,
+    hasMap: mapHref || undefined,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+
       <section
         id="home-hero"
         className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen min-h-[100svh] overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]"

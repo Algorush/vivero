@@ -15,6 +15,7 @@ type NotionPageLike = {
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
     Utilizacion?: { rich_text?: Array<{ plain_text?: string }> };
     Propagacion?: { rich_text?: Array<{ plain_text?: string }> };
+    Medicinal?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
     Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
@@ -47,6 +48,7 @@ export function mapPlant(page: NotionPageLike): Plant {
     tamano: textArrayToPlain(page.properties.Tamano?.rich_text),
     utilizacion: textArrayToPlain(page.properties.Utilizacion?.rich_text),
     propagacion: textArrayToPlain(page.properties.Propagacion?.rich_text),
+    medicinal: textArrayToPlain(page.properties.Medicinal?.rich_text),
     category: page.properties.Category?.select?.name || "",
     nativo: page.properties.Nativo?.checkbox ?? false,
     price: page.properties.Price?.number || 0,

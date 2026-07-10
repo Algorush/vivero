@@ -50,6 +50,7 @@ async function fetchPage(pageId: string): Promise<{
     Tamano?: { rich_text?: Array<{ plain_text?: string }> };
     Utilizacion?: { rich_text?: Array<{ plain_text?: string }> };
     Propagacion?: { rich_text?: Array<{ plain_text?: string }> };
+    Medicinal?: { rich_text?: Array<{ plain_text?: string }> };
     Category?: { select?: { name?: string } | null };
     Nativo?: { checkbox?: boolean };
     Price?: { number?: number | null };
@@ -74,6 +75,7 @@ async function fetchPage(pageId: string): Promise<{
       Tamano?: { rich_text?: Array<{ plain_text?: string }> };
       Utilizacion?: { rich_text?: Array<{ plain_text?: string }> };
       Propagacion?: { rich_text?: Array<{ plain_text?: string }> };
+      Medicinal?: { rich_text?: Array<{ plain_text?: string }> };
       Category?: { select?: { name?: string } | null };
       Nativo?: { checkbox?: boolean };
       Price?: { number?: number | null };
@@ -109,6 +111,7 @@ function mapPageToPlant(
     tamano: textOf(page.properties?.Tamano?.rich_text),
     utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
     propagacion: textOf(page.properties?.Propagacion?.rich_text),
+    medicinal: textOf(page.properties?.Medicinal?.rich_text),
     category: page.properties?.Category?.select?.name || "",
     nativo: page.properties?.Nativo?.checkbox ?? false,
     price: page.properties?.Price?.number || 0,
@@ -129,6 +132,9 @@ async function upsertPlant(pageId: string): Promise<void> {
   `);
   await db.execute(sql`
     ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal TEXT NOT NULL DEFAULT ''
   `);
 
   const page = await fetchPage(pageId);
@@ -157,6 +163,7 @@ async function upsertPlant(pageId: string): Promise<void> {
         tamano: plantData.tamano,
         utilizacion: plantData.utilizacion,
         propagacion: plantData.propagacion,
+        medicinal: plantData.medicinal,
         category: plantData.category,
         nativo: plantData.nativo,
         price: plantData.price,

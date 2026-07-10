@@ -144,6 +144,9 @@ function buildEmbeddingText(plant) {
     plant.exposicion,
     plant.fruta,
     plant.tamano,
+    plant.utilizacion,
+    plant.propagacion,
+    plant.medicinal,
   ]
     .filter(Boolean)
     .join(". ");
@@ -174,6 +177,7 @@ async function ensureSchema() {
       tamano TEXT NOT NULL DEFAULT '',
       utilizacion TEXT NOT NULL DEFAULT '',
       propagacion TEXT NOT NULL DEFAULT '',
+      medicinal TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
       nativo BOOLEAN NOT NULL DEFAULT false,
       price INTEGER NOT NULL DEFAULT 0,
@@ -193,6 +197,7 @@ async function ensureSchema() {
 
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal TEXT NOT NULL DEFAULT ''`;
 
   // Migrate embedding column if dimensions changed (e.g. 1536 → 384)
   // atttypmod for vector(N) = N + 4
@@ -243,6 +248,7 @@ function mapNotionPageToPlant(page, imageMap) {
     tamano: textOf(page.properties?.Tamano?.rich_text),
     utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
     propagacion: textOf(page.properties?.Propagacion?.rich_text),
+    medicinal: textOf(page.properties?.Medicinal?.rich_text),
     category: page.properties?.Category?.select?.name || "",
     nativo: page.properties?.Nativo?.checkbox ?? false,
     price: page.properties?.Price?.number || 0,
@@ -291,6 +297,7 @@ export async function main() {
             tamano: plantData.tamano,
             utilizacion: plantData.utilizacion,
             propagacion: plantData.propagacion,
+            medicinal: plantData.medicinal,
             category: plantData.category,
             nativo: plantData.nativo,
             price: plantData.price,

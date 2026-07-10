@@ -259,6 +259,7 @@ function buildProperties(row, mapping) {
     ["Cuidados", "cuidados"],
     ["Utilizacion", "utilizacion"],
     ["Propagacion", "propagacion"],
+    ["Medicinal", "medicinal"],
     ["Cientifico", "cientifico"],
     ["Frase", "frase"],
   ];
@@ -314,6 +315,7 @@ async function main() {
     cuidados: resolvePropertyName(properties, "Cuidados", "rich_text"),
     utilizacion: resolvePropertyName(properties, "Utilizacion", "rich_text"),
     propagacion: resolvePropertyName(properties, "Propagacion", "rich_text"),
+    medicinal: resolvePropertyName(properties, "Medicinal", "rich_text"),
     cientifico: resolvePropertyName(properties, "Cientifico", "rich_text"),
     frase: resolvePropertyName(properties, "Frase", "rich_text"),
     available: resolvePropertyName(properties, "Available", "checkbox"),
@@ -342,6 +344,7 @@ async function main() {
     ["Cuidados", "cuidados"],
     ["Utilizacion", "utilizacion"],
     ["Propagacion", "propagacion"],
+    ["Medicinal", "medicinal"],
     ["Cientifico", "cientifico"],
     ["Frase", "frase"],
   ];

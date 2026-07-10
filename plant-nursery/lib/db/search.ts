@@ -43,6 +43,7 @@ function rowToPlant(row: Record<string, unknown>): Plant {
     tamano: row.tamano as string,
     utilizacion: row.utilizacion as string,
     propagacion: row.propagacion as string,
+    medicinal: row.medicinal as string,
     category: row.category as string,
     nativo: row.nativo as boolean,
     price: row.price as number,
@@ -148,9 +149,15 @@ async function semanticSearch(
     [...params, options.limit, options.offset]
   ) as Record<string, unknown>[];
 
+  // The count query's WHERE clause never references $1 (the vector), only
+  // $2/$3 for category/nativo when present. If no filters were added,
+  // whereClause has zero placeholders, so we must send zero params -
+  // otherwise Postgres errors with "bind message supplies N parameters,
+  // but prepared statement requires 0".
+  const countParams = paramIndex === 2 ? [] : params.slice(0, paramIndex - 1);
   const countRows = await sql.query(
     `SELECT COUNT(*) as total FROM plants WHERE ${whereClause}`,
-    params.slice(0, paramIndex - 1) // exclude limit/offset
+    countParams
   ) as Record<string, unknown>[];
 
   return {
@@ -166,7 +173,7 @@ async function fullTextSearch(
   const sql = getSql();
   const conditions: string[] = [
     "available = true",
-    `to_tsvector('spanish', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || coalesce(category,'') || ' ' || coalesce(flor,'') || ' ' || coalesce(riego,'') || ' ' || coalesce(tamano,'')) @@ plainto_tsquery('spanish', $1)`,
+    `to_tsvector('spanish', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || coalesce(category,'') || ' ' || coalesce(flor,'') || ' ' || coalesce(riego,'') || ' ' || coalesce(suelo,'') || ' ' || coalesce(florece,'') || ' ' || coalesce(exposicion,'') || ' ' || coalesce(fruta,'') || ' ' || coalesce(tamano,'') || ' ' || coalesce(utilizacion,'') || ' ' || coalesce(propagacion,'') || ' ' || coalesce(medicinal,'')) @@ plainto_tsquery('spanish', $1)`,
   ];
   const params: unknown[] = [query];
   let paramIndex = 2;
@@ -185,7 +192,7 @@ async function fullTextSearch(
 
   const rows = await sql.query(
     `SELECT *, ts_rank(
-       to_tsvector('spanish', coalesce(name,'') || ' ' || coalesce(description,'')),
+       to_tsvector('spanish', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || coalesce(utilizacion,'') || ' ' || coalesce(propagacion,'') || ' ' || coalesce(medicinal,'')),
        plainto_tsquery('spanish', $1)
      ) AS rank
      FROM plants
@@ -219,7 +226,7 @@ async function ilikeFallback(
 
   // Search each word independently across all text fields
   const words = query.trim().split(/\s+/).filter(Boolean);
-  const allFields = `(name || ' ' || description || ' ' || category || ' ' || flor || ' ' || riego || ' ' || suelo || ' ' || exposicion || ' ' || fruta || ' ' || tamano)`;
+  const allFields = `(name || ' ' || description || ' ' || category || ' ' || flor || ' ' || riego || ' ' || suelo || ' ' || florece || ' ' || exposicion || ' ' || fruta || ' ' || tamano || ' ' || utilizacion || ' ' || propagacion || ' ' || medicinal)`;
   const wordConditions = words.map((_, i) => `${allFields} ILIKE $${i + 1}`);
   const wordParams = words.map((w) => `%${w}%`);
 
