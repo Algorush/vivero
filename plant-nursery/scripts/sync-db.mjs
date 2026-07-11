@@ -14,6 +14,7 @@ import path from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // Fix fetch for Node.js (neon serverless needs it globally available)
 import { plants } from "../lib/db/schema.ts";
@@ -121,7 +122,32 @@ async function fetchAllPlants() {
 }
 
 // --- Image map ---------------------------------------------------------------
-function readImageMap() {
+// Mirrors lib/image-map.ts's readImageMap(): R2 is the live source of truth
+// (kept up to date by the Notion webhook), the local JSON file is only a
+// stale fallback for local dev when R2 credentials aren't configured.
+async function readImageMap() {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.CLOUDFLARE_R2_BUCKET;
+
+  if (accountId && accessKeyId && secretAccessKey && bucket) {
+    try {
+      const client = new S3Client({
+        region: "auto",
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: { accessKeyId, secretAccessKey },
+      });
+      const response = await client.send(
+        new GetObjectCommand({ Bucket: bucket, Key: "cloudflare-image-map.json" })
+      );
+      const text = await response.Body.transformToString();
+      if (text) return JSON.parse(text);
+    } catch {
+      // fall through to local file fallback
+    }
+  }
+
   const mapPath = path.resolve(process.cwd(), "data", "cloudflare-image-map.json");
   if (!existsSync(mapPath)) return {};
   try {
@@ -268,7 +294,7 @@ export async function main() {
   const pages = await fetchAllPlants();
   console.log(`Found ${pages.length} plants.\n`);
 
-  const imageMap = readImageMap();
+  const imageMap = await readImageMap();
 
   let upserted = 0;
   let embeddingsGenerated = 0;
