@@ -1,20 +1,28 @@
 /**
- * Embedding generation via Hugging Face Inference API (router, 2025+).
- * Uses OpenAI-compatible /v1/embeddings endpoint.
- * Model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
- * 384 dimensions, multilingual (Spanish supported). Free tier.
+ * Embedding generation via OpenAI's /v1/embeddings endpoint.
+ * Model: text-embedding-3-small, 1536 dimensions, multilingual (Spanish supported).
  */
+import OpenAI from "openai";
 
-const HF_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2";
-const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}/pipeline/feature-extraction`;
+const OPENAI_MODEL = "text-embedding-3-small";
 
-export const EMBEDDING_DIMS = 384;
+export const EMBEDDING_DIMS = 1536;
 
 // In-process cache: same query → same embedding (no repeat API calls)
 const embeddingCache = new Map<string, number[]>();
 
+let client: OpenAI | null = null;
+function getClient(): OpenAI {
+  if (!client) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("Missing OPENAI_API_KEY env var");
+    client = new OpenAI({ apiKey });
+  }
+  return client;
+}
+
 /**
- * Generate a 384-dimensional embedding via HuggingFace Inference API.
+ * Generate a 1536-dimensional embedding via OpenAI's text-embedding-3-small.
  * Results are cached in memory — the same query never hits the API twice.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
@@ -23,40 +31,13 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const cached = embeddingCache.get(key);
   if (cached) return cached;
 
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
-  if (!apiKey) throw new Error("Missing HUGGINGFACE_API_KEY env var");
-
-  const res = await fetch(HF_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ inputs: key }),
+  const response = await getClient().embeddings.create({
+    model: OPENAI_MODEL,
+    input: key,
   });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`HuggingFace API ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  // feature-extraction returns either:
-  //   2D array [tokens × dims]  → need mean pooling
-  //   1D array [dims]           → already pooled
-  const data = await res.json() as number[][] | number[];
-  let embedding: number[];
-
-  if (Array.isArray(data[0])) {
-    const matrix = data as number[][];
-    const dims = matrix[0].length;
-    embedding = new Array<number>(dims).fill(0);
-    for (const token of matrix) {
-      for (let i = 0; i < dims; i++) embedding[i] += token[i];
-    }
-    for (let i = 0; i < dims; i++) embedding[i] /= matrix.length;
-  } else {
-    embedding = data as number[];
-  }
+  const embedding = response.data[0]?.embedding;
+  if (!embedding) throw new Error("OpenAI API returned no embedding");
 
   embeddingCache.set(key, embedding);
   return embedding;

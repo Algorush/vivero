@@ -95,8 +95,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     };
   }
 
-  // Semantic search with pgvector if HF API key is set, fallback to FTS on any error
-  if (process.env.HUGGINGFACE_API_KEY) {
+  // Semantic search with pgvector if OpenAI API key is set, fallback to FTS on any error
+  if (process.env.OPENAI_API_KEY) {
     try {
       return await semanticSearch(query, { category, nativo, limit, offset });
     } catch (err) {
