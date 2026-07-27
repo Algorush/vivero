@@ -9,6 +9,14 @@ function parsePageSize(rawValue: string | null | undefined): number {
     : 12;
 }
 
+function logPlantsRequest(message: string, details: Record<string, unknown>) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.log(`[api/plants] ${message}`, details);
+}
+
 async function resolvePage(params: {
   category?: string;
   nativo?: boolean;
@@ -16,12 +24,22 @@ async function resolvePage(params: {
   query?: string;
   pageSize?: number;
 }) {
+  const startedAt = Date.now();
+  logPlantsRequest("request", params);
+
   const page = await getPlantsPage({
     category: params.category,
     nativo: params.nativo,
     cursor: params.cursor,
     query: params.query,
     pageSize: params.pageSize,
+  });
+
+  logPlantsRequest("response", {
+    durationMs: Date.now() - startedAt,
+    plants: page.plants.length,
+    hasMore: page.hasMore,
+    nextCursor: page.nextCursor,
   });
 
   return NextResponse.json(page);

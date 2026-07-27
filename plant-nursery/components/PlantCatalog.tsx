@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
@@ -62,47 +61,36 @@ export default function PlantCatalog({
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
-  const pendingUrlSyncRef = useRef<{
-    category: string;
-    query: string;
-    nativo: boolean | undefined;
-  } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const activeCategoryRef = useRef(activeCategory);
   const activeQueryRef = useRef(activeQuery);
   const activeNativoRef = useRef(activeNativo);
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   // Keep refs in sync with state
   useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
   useEffect(() => { activeQueryRef.current = activeQuery; }, [activeQuery]);
   useEffect(() => { activeNativoRef.current = activeNativo; }, [activeNativo]);
 
-  // Restore state from URL on popstate (back/forward navigation)
-  useEffect(() => {
-    const urlQuery = searchParams.get("q") ?? "";
-    const urlCategory = searchParams.get("category") ?? "";
-    const urlNativoRaw = searchParams.get("nativo");
+  const readFiltersFromUrl = useCallback(() => {
+    const currentUrl = new URL(window.location.href);
+    const urlQuery = currentUrl.searchParams.get("q") ?? "";
+    const urlCategory = currentUrl.searchParams.get("category") ?? "";
+    const urlNativoRaw = currentUrl.searchParams.get("nativo");
     const urlNativo = urlNativoRaw === "true" ? true : urlNativoRaw === "false" ? false : undefined;
 
-    const pendingUrlSync = pendingUrlSyncRef.current;
-    if (
-      pendingUrlSync &&
-      pendingUrlSync.category === urlCategory &&
-      pendingUrlSync.query === urlQuery &&
-      pendingUrlSync.nativo === urlNativo
-    ) {
-      pendingUrlSyncRef.current = null;
-      return;
-    }
+    return {
+      category: urlCategory,
+      query: urlQuery,
+      nativo: urlNativo,
+    };
+  }, []);
 
-    setSearchInput(urlQuery);
-    setActiveQuery(urlQuery);
-    setActiveCategory(urlCategory);
-    setActiveNativo(urlNativo);
-  }, [searchParams]);
-
-  const applyFilters = useCallback(async (nextCategory: string, rawQuery: string, nextNativo: boolean | undefined) => {
+  const applyFilters = useCallback(async (
+    nextCategory: string,
+    rawQuery: string,
+    nextNativo: boolean | undefined,
+    syncUrl: boolean = true
+  ) => {
     const nextQuery = rawQuery.trim();
 
     if (
@@ -115,6 +103,10 @@ export default function PlantCatalog({
 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
+
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     setIsFilterLoading(true);
     setFilterError("");
@@ -135,6 +127,7 @@ export default function PlantCatalog({
       const response = await fetch(`/api/plants?${query.toString()}`, {
         method: "GET",
         cache: "no-store",
+        signal: abortController.signal,
       });
 
       const data = (await response.json()) as PlantsApiResponse;
@@ -154,15 +147,19 @@ export default function PlantCatalog({
       setActiveNativo(nextNativo);
       setPage(data);
 
-      pendingUrlSyncRef.current = {
-        category: nextCategory,
-        query: nextQuery,
-        nativo: nextNativo,
-      };
-
-      router.replace(createFilterUrl(nextCategory, nextQuery, nextNativo), { scroll: false });
+      if (syncUrl) {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          createFilterUrl(nextCategory, nextQuery, nextNativo)
+        );
+      }
     } catch (error) {
       if (requestIdRef.current !== requestId) {
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
 
@@ -176,17 +173,24 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, [router]);
+  }, []);
 
+  // Restore state from URL on back/forward navigation
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void applyFilters(activeCategory, searchInput, activeNativo);
-    }, 400);
+    const handlePopState = () => {
+      const { category: urlCategory, query: urlQuery, nativo: urlNativo } = readFiltersFromUrl();
 
-    return () => {
-      window.clearTimeout(timer);
+      setSearchInput(urlQuery);
+      setActiveQuery(urlQuery);
+      setActiveCategory(urlCategory);
+      setActiveNativo(urlNativo);
+
+      void applyFilters(urlCategory, urlQuery, urlNativo, false);
     };
-  }, [activeCategory, activeNativo, applyFilters, searchInput]);
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyFilters, readFiltersFromUrl]);
 
   const runFilterAction = (action: () => void) => {
     action();
@@ -210,6 +214,10 @@ export default function PlantCatalog({
     void applyFilters(activeCategory, searchInput, next);
   };
 
+  const runSearch = () => {
+    void applyFilters(activeCategory, searchInput, activeNativo);
+  };
+
   const catalogLabel =
     activeNativo === true
       ? "Fillke Aliwentu"
@@ -229,14 +237,32 @@ export default function PlantCatalog({
                 <span className="ml-1.5 font-medium text-[#8b4f35]">{catalogLabel}</span>
               ) : null}
             </h2>
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Buscar planta..."
-              className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
-              aria-label="Buscar plantas"
-            />
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    runSearch();
+                  }
+                }}
+                placeholder="Buscar planta..."
+                className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
+                aria-label="Buscar plantas"
+              />
+              <button
+                type="button"
+                onClick={runSearch}
+                disabled={isFilterLoading}
+                className="flex shrink-0 items-center justify-center rounded-xl border border-[#d8c0a0] bg-[#f6ebda] px-3 py-1.5 text-sm text-[#1f1a17] transition hover:bg-[#ebdbc1] disabled:cursor-wait disabled:opacity-70"
+                aria-label="Buscar plantas"
+                title="Buscar"
+              >
+                <span aria-hidden="true">🔍</span>
+              </button>
+            </div>
           </div>
 
           {/* Row 2: nativo toggles + category chips in single scrollable row */}
@@ -319,6 +345,7 @@ export default function PlantCatalog({
           category={activeCategory}
           query={activeQuery}
           nativo={activeNativo}
+          disableAutoLoad={Boolean(activeQuery.trim())}
         />
       </div>
     </>

@@ -8,12 +8,44 @@ import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 
 export const revalidate = 60;
 
-export async function generateMetadata(): Promise<Metadata> {
-  const nurseryProfile = await getNurseryProfile();
+type PageSearchParams = {
+  category?: string;
+  cursor?: string;
+  q?: string;
+  nativo?: string;
+};
+
+function hasSearchParams(searchParams?: PageSearchParams): boolean {
+  return Boolean(
+    searchParams?.category?.trim() ||
+      searchParams?.cursor?.trim() ||
+      searchParams?.q?.trim() ||
+      searchParams?.nativo?.trim()
+  );
+}
+
+export async function generateMetadata(
+  { searchParams }: { searchParams: Promise<PageSearchParams> }
+): Promise<Metadata> {
+  const params = await searchParams;
   const title = "Vivero Karu-lemu | Plantas nativas y exoticas en catalogo online";
   const description =
-    nurseryProfile.description?.trim() ||
     "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu: precios, disponibilidad y caracteristicas de cada especie.";
+
+  if (hasSearchParams(params)) {
+    return {
+      title,
+      description,
+      alternates: { canonical: SITE_URL },
+      openGraph: {
+        title,
+        description,
+        url: SITE_URL,
+      },
+    };
+  }
+
+  const nurseryProfile = await getNurseryProfile();
 
   return {
     title,
@@ -29,12 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 type HomeProps = {
-  searchParams: Promise<{
-    category?: string;
-    cursor?: string;
-    q?: string;
-    nativo?: string;
-  }>;
+  searchParams: Promise<PageSearchParams>;
 };
 
 function sanitizePhoneToWa(value: string): string {
@@ -48,9 +75,9 @@ export default async function Home({ searchParams }: HomeProps) {
   const activeCursor = cursor?.trim() || "";
   const activeQuery = q?.trim() || "";
   const activeNativo = nativo === "true" ? true : nativo === "false" ? false : undefined;
+  const searchMode = hasSearchParams({ category, cursor, q, nativo });
 
-  const [nurseryProfile, categories, plantsPage] = await Promise.all([
-    getNurseryProfile(),
+  const [categories, plantsPage, nurseryProfile] = await Promise.all([
     getPlantCategories(),
     getPlantsPage({
       category: activeCategory || undefined,
@@ -59,6 +86,16 @@ export default async function Home({ searchParams }: HomeProps) {
       nativo: activeNativo,
       pageSize: 12,
     }),
+    searchMode
+      ? Promise.resolve({
+          description: "",
+          image: "",
+          phone: "",
+          whatsappText: "",
+          location: "",
+          mapUrl: "",
+        })
+      : getNurseryProfile(),
   ]);
 
   const waPhone = sanitizePhoneToWa(nurseryProfile.phone);

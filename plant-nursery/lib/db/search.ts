@@ -61,6 +61,19 @@ function rowToPlant(row: Record<string, unknown>): Plant {
 export async function searchPlants(options: SearchOptions = {}): Promise<SearchResult> {
   const sql = getSql();
   const { query, category, nativo, limit = 12, offset = 0 } = options;
+  const shouldLog = process.env.NODE_ENV !== "production";
+
+  if (shouldLog) {
+    console.log("[search] request", {
+      pid: process.pid,
+      query,
+      category,
+      nativo,
+      limit,
+      offset,
+      hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+    });
+  }
 
   // Build WHERE conditions
   const conditions: string[] = ["available = true"];
@@ -98,13 +111,33 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
   // Semantic search with pgvector if OpenAI API key is set, fallback to FTS on any error
   if (process.env.OPENAI_API_KEY) {
     try {
-      return await semanticSearch(query, { category, nativo, limit, offset });
+      const result = await semanticSearch(query, { category, nativo, limit, offset });
+
+      if (shouldLog) {
+        console.log("[search] mode=semantic", {
+          pid: process.pid,
+          plants: result.plants.length,
+          total: result.total,
+        });
+      }
+
+      return result;
     } catch (err) {
-      console.warn("[search] semantic search failed, falling back to FTS:", (err as Error).message);
+      console.error("[search] semantic search failed, falling back to FTS:", err);
     }
   }
 
-  return fullTextSearch(query, { category, nativo, limit, offset });
+  const result = await fullTextSearch(query, { category, nativo, limit, offset });
+
+  if (shouldLog) {
+    console.log("[search] mode=fts", {
+      pid: process.pid,
+      plants: result.plants.length,
+      total: result.total,
+    });
+  }
+
+  return result;
 }
 
 async function semanticSearch(

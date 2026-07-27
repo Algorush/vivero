@@ -12,6 +12,7 @@ type PlantInfiniteGridProps = {
   category: string;
   query: string;
   nativo?: boolean;
+  disableAutoLoad?: boolean;
 };
 
 type PlantsApiResponse = {
@@ -31,6 +32,7 @@ export default function PlantInfiniteGrid({
   category,
   query,
   nativo,
+  disableAutoLoad = false,
 }: PlantInfiniteGridProps) {
   const [plants, setPlants] = useState<Plant[]>(filterAvailablePlants(initialPlants));
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -39,6 +41,7 @@ export default function PlantInfiniteGrid({
   const [error, setError] = useState<string>("");
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const hasUserScrolledRef = useRef(false);
 
   useEffect(() => {
     setPlants(filterAvailablePlants(initialPlants));
@@ -114,6 +117,10 @@ export default function PlantInfiniteGrid({
   }, [category, hasMore, isLoading, nativo, nextCursor, query]);
 
   useEffect(() => {
+    if (disableAutoLoad) {
+      return;
+    }
+
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       return;
     }
@@ -142,14 +149,22 @@ export default function PlantInfiniteGrid({
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, isLoading, loadMore]);
+  }, [disableAutoLoad, hasMore, isLoading, loadMore]);
 
   useEffect(() => {
+    if (disableAutoLoad) {
+      return;
+    }
+
     if (typeof window === "undefined") {
       return;
     }
 
     const tryAutoLoad = () => {
+      if (!hasUserScrolledRef.current) {
+        return;
+      }
+
       if (!hasMore || isLoading) {
         return;
       }
@@ -162,18 +177,21 @@ export default function PlantInfiniteGrid({
       }
     };
 
-    window.addEventListener("scroll", tryAutoLoad, { passive: true });
-    window.addEventListener("resize", tryAutoLoad);
-    window.addEventListener("touchmove", tryAutoLoad, { passive: true });
+    const handleScroll = () => {
+      hasUserScrolledRef.current = true;
+      tryAutoLoad();
+    };
 
-    tryAutoLoad();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", tryAutoLoad);
+    window.addEventListener("touchmove", handleScroll, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", tryAutoLoad);
+      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", tryAutoLoad);
-      window.removeEventListener("touchmove", tryAutoLoad);
+      window.removeEventListener("touchmove", handleScroll);
     };
-  }, [hasMore, isLoading, loadMore]);
+  }, [disableAutoLoad, hasMore, isLoading, loadMore]);
 
   return (
     <>
