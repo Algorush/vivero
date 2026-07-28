@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Manrope, Sora } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { getNurseryProfile } from "@/lib/notion";
+import { CartProvider } from "@/lib/cart-context";
+import CartButton from "@/components/CartButton";
+import CartDrawer from "@/components/CartDrawer";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -37,17 +41,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nurseryProfile = await getNurseryProfile();
+
   return (
     <html
       lang="es"
       className={`${manrope.variable} ${sora.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <CartProvider>
+          {children}
+          <CartButton />
+          <CartDrawer whatsappPhone={nurseryProfile.phone} />
+        </CartProvider>
+      </body>
     </html>
   );
 }

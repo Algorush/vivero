@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ImageCarousel from "@/components/ImageCarousel";
+import AddToCartButton from "@/components/AddToCartButton";
 
 import { getPlantBySlug } from "@/lib/notion";
 import { SITE_URL } from "@/lib/site-config";
@@ -149,6 +150,8 @@ export default async function PlantPage({ params }: PlantPageProps) {
           Precio: ${plant.price}
         </p>
       )}
+
+      <AddToCartButton plant={plant} className="mb-4 w-full rounded-xl bg-[#2f5f4f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#254c40] sm:w-auto" />
 
       <p className="whitespace-pre-line">{plant.description}</p>
 

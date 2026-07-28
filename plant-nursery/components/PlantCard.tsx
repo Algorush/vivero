@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ImageCarousel from "@/components/ImageCarousel";
+import AddToCartButton from "@/components/AddToCartButton";
 import { Plant } from "@/types/plant";
 
 type PlantCardProps = {
@@ -16,7 +17,7 @@ export default function PlantCard({
   return (
     <Link href={`/plants/${plant.slug}`} className="block min-w-0">
       <div
-        className="animate-card-in min-w-0 overflow-hidden rounded-2 bg-white shadow transition hover:shadow-lg motion-reduce:animate-none"
+        className="relative animate-card-in min-w-0 overflow-hidden rounded-2 bg-white shadow transition hover:shadow-lg motion-reduce:animate-none"
         style={{ animationDelay: `${animationDelayMs}ms` }}
       >
         {plant.images?.length > 0 && (
@@ -41,6 +42,8 @@ export default function PlantCard({
             ${plant.price}
           </p>
         )}
+
+        <AddToCartButton plant={plant} variant="icon" />
       </div>
     </Link>
   );
