@@ -137,7 +137,7 @@ export default async function PlantPage({ params }: PlantPageProps) {
           src="/illustrations/ornament-plant-page-2.png"
           alt="Ornamento"
           fill
-          className="object-cover"
+          className="object-contain"
         />
       </div>
 
