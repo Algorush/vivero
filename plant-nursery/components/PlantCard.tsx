@@ -17,7 +17,7 @@ export default function PlantCard({
   return (
     <Link href={`/plants/${plant.slug}`} className="block min-w-0">
       <div
-        className="relative animate-card-in min-w-0 overflow-hidden rounded-2 bg-white shadow transition hover:shadow-lg motion-reduce:animate-none"
+        className="relative animate-card-in min-w-0 overflow-hidden rounded-2 bg-white text-[#1f1a17] shadow transition hover:shadow-lg motion-reduce:animate-none dark:bg-[#fffdf8] dark:text-[#1f1a17]"
         style={{ animationDelay: `${animationDelayMs}ms` }}
       >
         {plant.images?.length > 0 && (
@@ -33,12 +33,14 @@ export default function PlantCard({
           </div>
         )}
 
-        <h2 className="break-words text-lg font-semibold">{plant.name}</h2>
+        <h2 className="break-words text-lg font-semibold text-[#1f1a17]">
+          {plant.name}
+        </h2>
 
-        <p className="break-words text-sm text-gray-500">{plant.category}</p>
+        <p className="break-words text-sm text-[#6b5b4c]">{plant.category}</p>
 
         {plant.price > 0 && (
-          <p className="text-green-600 font-bold mt-2">
+          <p className="mt-2 font-bold text-[#2f5f4f]">
             ${plant.price}
           </p>
         )}

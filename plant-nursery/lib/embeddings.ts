@@ -10,7 +10,7 @@ export const EMBEDDING_DIMS = 1536;
 
 type EmbeddingGlobals = typeof globalThis & {
   __plantNurseryEmbeddingCache?: Map<string, number[]>;
-  __plantNurseryEmbeddingRequests?: Map<string, Promise<number[]>>;
+  __plantNurseryEmbeddingRequests?: Map<string, Promise<number[] | null>>;
 };
 
 const globalForEmbeddings = globalThis as EmbeddingGlobals;
@@ -22,7 +22,7 @@ globalForEmbeddings.__plantNurseryEmbeddingCache = embeddingCache;
 
 // Deduplicate concurrent requests for the same normalized query.
 const inFlightEmbeddingRequests =
-  globalForEmbeddings.__plantNurseryEmbeddingRequests ?? new Map<string, Promise<number[]>>();
+  globalForEmbeddings.__plantNurseryEmbeddingRequests ?? new Map<string, Promise<number[] | null>>();
 globalForEmbeddings.__plantNurseryEmbeddingRequests = inFlightEmbeddingRequests;
 
 let client: OpenAI | null = null;
@@ -39,7 +39,7 @@ function getClient(): OpenAI {
  * Generate a 1536-dimensional embedding via OpenAI's text-embedding-3-small.
  * Results are cached in memory — the same query never hits the API twice.
  */
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string): Promise<number[] | null> {
   const key = text.slice(0, 512).toLowerCase().trim();
   const shouldLog = process.env.NODE_ENV !== "production";
 
@@ -99,7 +99,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       return embedding;
     } catch (error) {
       console.error("[embeddings] OpenAI embedding request failed:", error);
-      throw error;
+      return null;
     } finally {
       inFlightEmbeddingRequests.delete(key);
     }

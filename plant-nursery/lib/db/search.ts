@@ -152,6 +152,18 @@ async function semanticSearch(
   if (!embedding) {
     const { generateEmbedding } = await import("../embeddings");
     embedding = await generateEmbedding(cacheKey);
+
+    if (!embedding) {
+      console.error("[search] semantic embedding unavailable, falling back to FTS", {
+        pid: process.pid,
+        query,
+        category,
+        nativo,
+      });
+
+      return fullTextSearch(query, { category, nativo, limit, offset });
+    }
+
     embeddingCache.set(cacheKey, embedding);
   }
 

@@ -98,7 +98,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
       ];
     });
-    setIsOpen(true);
   }, []);
 
   const removeItem = useCallback((slug: string) => {
