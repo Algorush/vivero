@@ -154,11 +154,7 @@ h6 {
   padding: 0.45rem 1rem;
   font-size: 0.925rem;
   font-weight: 600;
-  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
-}
-
-.mapuche-chip:hover {
-  transform: translateY(-1px) rotate(-0.4deg);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .mapuche-chip-active {

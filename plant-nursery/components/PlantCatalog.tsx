@@ -266,7 +266,10 @@ export default function PlantCatalog({
           </div>
 
           {/* Row 2: nativo toggles + category chips in single scrollable row */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+          <div 
+            className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+            style={{ paddingTop: "2px" }}
+          >
             <button
               type="button"
               onClick={() => toggleNativo(true)}
