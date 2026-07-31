@@ -2,20 +2,26 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { getNurseryAbout, getNurseryProfile } from "@/lib/notion";
+import { appendLanguageParam, normalizeSiteLanguage } from "@/lib/site-language";
 
 export const revalidate = 60;
 
-export default async function SobreNuestroViveroPage() {
+type AboutPageProps = {
+  searchParams?: Promise<{ lang?: string }>;
+};
+
+export default async function SobreNuestroViveroPage({ searchParams }: AboutPageProps) {
+  const lang = normalizeSiteLanguage((await searchParams)?.lang);
   const [about, nurseryProfile] = await Promise.all([
-    getNurseryAbout(),
-    getNurseryProfile(),
+    getNurseryAbout(lang),
+    getNurseryProfile(lang),
   ]);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
       <div className="mb-6">
-        <Link href="/" className="text-sm font-medium text-[#8b4f35] transition hover:text-[#2f5f4f]">
-          ← Volver al catalogo
+        <Link href={appendLanguageParam("/", lang)} className="text-sm font-medium text-[#8b4f35] transition hover:text-[#2f5f4f]">
+          ← {lang === "en" ? "Back to catalog" : "Volver al catalogo"}
         </Link>
       </div>
 
@@ -37,19 +43,21 @@ export default async function SobreNuestroViveroPage() {
 
         <div className="p-6 sm:p-8 md:p-10">
           <p className="text-xs uppercase tracking-[0.22em] text-[#8b4f35]">
-            Sobre el vivero
+            {lang === "en" ? "About the nursery" : "Sobre el vivero"}
           </p>
           <h1 className="mt-3 text-3xl font-bold text-[#1f1a17] sm:text-4xl">
             {about.title}
           </h1>
 
           <div className="mt-6 max-w-3xl whitespace-pre-line text-base leading-8 text-zinc-700">
-            {about.body || "No hay contenido disponible en la sección Sobre Nosotros de Notion."}
+            {about.body || (lang === "en"
+              ? "No content is available in the About Us section of Notion."
+              : "No hay contenido disponible en la sección Sobre Nosotros de Notion.")}
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/" className="mapuche-button-primary">
-              Ver catálogo
+            <Link href={appendLanguageParam("/", lang)} className="mapuche-button-primary">
+              {lang === "en" ? "View catalog" : "Ver catálogo"}
             </Link>
           </div>
         </div>

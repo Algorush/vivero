@@ -6,6 +6,7 @@ import { getNurseryProfile } from "@/lib/notion";
 import { CartProvider } from "@/lib/cart-context";
 import CartButton from "@/components/CartButton";
 import CartDrawer from "@/components/CartDrawer";
+import DocumentLanguageSync from "@/components/DocumentLanguageSync";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -55,6 +56,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
+          <DocumentLanguageSync />
           {children}
           <CartButton />
           <CartDrawer whatsappPhone={nurseryProfile.phone} />

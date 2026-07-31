@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
+import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type PlantCatalogProps = {
   categories: string[];
@@ -11,6 +12,7 @@ type PlantCatalogProps = {
   initialQuery: string;
   initialNativo?: boolean;
   initialPage: PlantsPageResult;
+  lang?: SiteLanguage;
 };
 
 type PlantsApiResponse = PlantsPageResult | { error?: string };
@@ -26,7 +28,12 @@ function isPlantsPageResult(data: PlantsApiResponse): data is PlantsPageResult {
   );
 }
 
-function createFilterUrl(category?: string, searchQuery?: string, nativo?: boolean): string {
+function createFilterUrl(
+  category?: string,
+  searchQuery?: string,
+  nativo?: boolean,
+  lang: SiteLanguage = "es"
+): string {
   const params = new URLSearchParams();
 
   if (category) {
@@ -41,6 +48,8 @@ function createFilterUrl(category?: string, searchQuery?: string, nativo?: boole
     params.set("nativo", String(nativo));
   }
 
+  params.set("lang", lang);
+
   const queryString = params.toString();
   return queryString ? `/?${queryString}` : "/";
 }
@@ -51,7 +60,9 @@ export default function PlantCatalog({
   initialQuery,
   initialNativo,
   initialPage,
+  lang: rawLang = "es",
 }: PlantCatalogProps) {
+  const lang = normalizeSiteLanguage(rawLang);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
@@ -122,6 +133,7 @@ export default function PlantCatalog({
       if (nextNativo !== undefined) {
         query.set("nativo", String(nextNativo));
       }
+      query.set("lang", lang);
       query.set("pageSize", "12");
 
       const response = await fetch(`/api/plants?${query.toString()}`, {
@@ -151,7 +163,7 @@ export default function PlantCatalog({
         window.history.replaceState(
           window.history.state,
           "",
-          createFilterUrl(nextCategory, nextQuery, nextNativo)
+            createFilterUrl(nextCategory, nextQuery, nextNativo, lang)
         );
       }
     } catch (error) {
@@ -173,7 +185,7 @@ export default function PlantCatalog({
         setIsFilterLoading(false);
       }
     }
-  }, []);
+  }, [lang]);
 
   // Restore state from URL on back/forward navigation
   useEffect(() => {
@@ -341,13 +353,14 @@ export default function PlantCatalog({
 
       <div className="relative">
         <PlantInfiniteGrid
-          key={`${activeCategory || "all"}:${activeQuery}:${String(activeNativo)}`}
+          key={`${activeCategory || "all"}:${activeQuery}:${String(activeNativo)}:${lang}`}
           initialPlants={page.plants}
           initialNextCursor={page.nextCursor}
           initialHasMore={page.hasMore}
           category={activeCategory}
           query={activeQuery}
           nativo={activeNativo}
+          lang={lang}
           disableAutoLoad={Boolean(activeQuery.trim())}
         />
       </div>

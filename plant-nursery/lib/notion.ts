@@ -5,6 +5,11 @@ import { unstable_cache } from "next/cache";
 import MiniSearch from "minisearch";
 import type { Plant } from "@/types/plant";
 import { readImageMap, type ImageMap } from "./image-map";
+import {
+  localizedValue,
+  normalizeSiteLanguage,
+  type SiteLanguage,
+} from "./site-language";
 
 // --- Notion client -----------------------------------------------------------
 // Legacy API version while the workspace is not migrated to data sources.
@@ -57,6 +62,7 @@ type GetPlantsPageOptions = {
   cursor?: string;
   query?: string;
   pageSize?: number;
+  lang?: SiteLanguage;
 };
 
 type NotionRichTextItem = {
@@ -208,6 +214,48 @@ function normalizeNotionPageId(value: string): string {
 // Converts rich text array into a plain string.
 function richTextToPlain(items?: NotionRichTextItem[]): string {
   return (items ?? []).map((item) => item.plain_text ?? "").join("").trim();
+}
+
+function getLocalizedText(
+  properties: Record<string, unknown>,
+  baseName: string,
+  lang: SiteLanguage,
+  kind: "title" | "rich_text" = "rich_text"
+): string {
+  const candidates =
+    lang === "en"
+      ? [
+          `${baseName.toLowerCase()}_en`,
+          `${baseName}_en`,
+          baseName.toLowerCase(),
+          baseName,
+        ]
+      : [
+          baseName,
+          baseName.toLowerCase(),
+          `${baseName.toLowerCase()}_en`,
+          `${baseName}_en`,
+        ];
+
+  for (const key of candidates) {
+    const property = properties[key] as
+      | { title?: NotionRichTextItem[]; rich_text?: NotionRichTextItem[] }
+      | undefined;
+
+    if (!property) {
+      continue;
+    }
+
+    const value = kind === "title"
+      ? richTextToPlain(property.title)
+      : richTextToPlain(property.rich_text);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
 }
 
 function textArrayToPlain(items?: Array<{ plain_text?: string }>): string {
@@ -405,7 +453,8 @@ function getImageFromBlock(block: NotionBlock): string {
 }
 
 // Maps Notion database page to internal Plant model.
-function mapPlant(page: NotionPage, imageMap: ImageMap = {}): Plant {
+function mapPlant(page: NotionPage, imageMap: ImageMap = {}, lang: SiteLanguage = "es"): Plant {
+  const properties = page.properties as Record<string, unknown>;
   const baseName = getPlantImageBaseName(page);
   const entry = imageMap[baseName];
 
@@ -429,19 +478,27 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}): Plant {
 
   return {
     id: page.id,
-    name: textArrayToPlain(page.properties.Title?.title),
+    name: localizedValue(
+      lang,
+      getLocalizedText(properties, "Title", "es", "title"),
+      getLocalizedText(properties, "Title", "en", "title")
+    ),
     slug: textArrayToPlain(page.properties.Slug?.rich_text),
-    description: textArrayToPlain(page.properties.Description?.rich_text),
-    flor: textArrayToPlain(page.properties.Flor?.rich_text),
-    riego: textArrayToPlain(page.properties.Riego?.rich_text),
-    suelo: textArrayToPlain(page.properties.Suelo?.rich_text),
-    florece: textArrayToPlain(page.properties.Florece?.rich_text),
-    exposicion: textArrayToPlain(page.properties.Exposicion?.rich_text),
-    fruta: textArrayToPlain(page.properties.Fruta?.rich_text),
-    tamano: textArrayToPlain(page.properties.Tamano?.rich_text),
-    utilizacion: textArrayToPlain(page.properties.Utilizacion?.rich_text),
-    propagacion: textArrayToPlain(page.properties.Propagacion?.rich_text),
-    medicinal: textArrayToPlain(page.properties.Medicinal?.rich_text),
+    description: localizedValue(
+      lang,
+      getLocalizedText(properties, "Description", "es"),
+      getLocalizedText(properties, "Description", "en")
+    ),
+    flor: localizedValue(lang, getLocalizedText(properties, "Flor", "es"), getLocalizedText(properties, "Flor", "en")),
+    riego: localizedValue(lang, getLocalizedText(properties, "Riego", "es"), getLocalizedText(properties, "Riego", "en")),
+    suelo: localizedValue(lang, getLocalizedText(properties, "Suelo", "es"), getLocalizedText(properties, "Suelo", "en")),
+    florece: localizedValue(lang, getLocalizedText(properties, "Florece", "es"), getLocalizedText(properties, "Florece", "en")),
+    exposicion: localizedValue(lang, getLocalizedText(properties, "Exposicion", "es"), getLocalizedText(properties, "Exposicion", "en")),
+    fruta: localizedValue(lang, getLocalizedText(properties, "Fruta", "es"), getLocalizedText(properties, "Fruta", "en")),
+    tamano: localizedValue(lang, getLocalizedText(properties, "Tamano", "es"), getLocalizedText(properties, "Tamano", "en")),
+    utilizacion: localizedValue(lang, getLocalizedText(properties, "Utilizacion", "es"), getLocalizedText(properties, "Utilizacion", "en")),
+    propagacion: localizedValue(lang, getLocalizedText(properties, "Propagacion", "es"), getLocalizedText(properties, "Propagacion", "en")),
+    medicinal: localizedValue(lang, getLocalizedText(properties, "Medicinal", "es"), getLocalizedText(properties, "Medicinal", "en")),
     category: page.properties.Category?.select?.name || "",
     nativo: page.properties.Nativo?.checkbox ?? false,
     price: page.properties.Price?.number || 0,
@@ -511,13 +568,14 @@ async function queryPlants(params?: {
 // --- Public API --------------------------------------------------------------
 // Returns all plants from cache.
 export async function getPlants(): Promise<Plant[]> {
-  return getPlantsCached();
+  return getPlantsCached("es");
 }
 
 // Returns a paginated list of plants.
 export async function getPlantsPage(
   options: GetPlantsPageOptions = {}
 ): Promise<PlantsPageResult> {
+  const lang = normalizeSiteLanguage(options.lang);
   const category = normalizeCategory(options.category) ?? "";
   const cursor = options.cursor?.trim() ?? "";
   const query = normalizeSearchQuery(options.query) ?? "";
@@ -528,7 +586,7 @@ export async function getPlantsPage(
   if (process.env.NEON_DATABASE_URL) {
     const { searchPlants } = await import("./db/search");
     const offset = parseOffsetCursor(cursor);
-    const result = await searchPlants({ query, category, nativo, limit: pageSize, offset });
+    const result = await searchPlants({ query, category, nativo, limit: pageSize, offset, lang });
     const nextOffset = offset + result.plants.length;
     const hasMore = nextOffset < result.total;
     return {
@@ -541,7 +599,7 @@ export async function getPlantsPage(
   // Fallback: in-memory MiniSearch
   if (query || nativo !== undefined) {
     const normalizedCategory = normalizeSearchText(category);
-    const allPlants = await getPlantsCached();
+    const allPlants = await getPlantsCached(lang);
 
     let candidates: Plant[];
 
@@ -577,10 +635,10 @@ export async function getPlantsPage(
   }
 
   if (category) {
-    return getPlantsPageCached(category, cursor, pageSize);
+    return getPlantsPageCached(category, cursor, pageSize, lang);
   }
 
-  return getPlantsPageCached("", cursor, pageSize);
+  return getPlantsPageCached("", cursor, pageSize, lang);
 }
 
 // Returns unique sorted plant categories.
@@ -589,7 +647,7 @@ export async function getPlantCategories(): Promise<string[]> {
     const { getCategories } = await import("./db/search");
     return getCategories();
   }
-  const plants = await getPlantsCached();
+  const plants = await getPlantsCached("es");
   return Array.from(
     new Set(
       plants
@@ -600,22 +658,22 @@ export async function getPlantCategories(): Promise<string[]> {
 }
 
 // Returns one plant by slug.
-export async function getPlantBySlug(slug: string): Promise<Plant | null> {
-  return getPlantBySlugCached(slug.trim());
+export async function getPlantBySlug(slug: string, lang: SiteLanguage = "es"): Promise<Plant | null> {
+  return getPlantBySlugCached(slug.trim(), normalizeSiteLanguage(lang));
 }
 
 // Returns nursery profile from the dedicated Notion page.
-export async function getNurseryProfile(): Promise<NurseryProfile> {
-  return getNurseryProfileCached();
+export async function getNurseryProfile(lang: SiteLanguage = "es"): Promise<NurseryProfile> {
+  return getNurseryProfileCached(normalizeSiteLanguage(lang));
 }
 
-export async function getNurseryAbout(): Promise<NurseryAbout> {
-  return getNurseryAboutCached();
+export async function getNurseryAbout(lang: SiteLanguage = "es"): Promise<NurseryAbout> {
+  return getNurseryAboutCached(normalizeSiteLanguage(lang));
 }
 
 // --- Cached queries ----------------------------------------------------------
 // Cached full list for catalog and category derivation.
-const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
+const getPlantsCached = unstable_cache(async (lang: SiteLanguage): Promise<Plant[]> => {
   const plants: Plant[] = [];
   let cursor: string | undefined;
   let hasMore = true;
@@ -627,7 +685,7 @@ const getPlantsCached = unstable_cache(async (): Promise<Plant[]> => {
       pageSize: 100,
     });
 
-    plants.push(...response.results.filter((p) => p.object === "page").map((p) => mapPlant(p, imageMap)));
+    plants.push(...response.results.filter((p) => p.object === "page").map((p) => mapPlant(p, imageMap, lang)));
 
     cursor = response.next_cursor ?? undefined;
     hasMore = Boolean(response.has_more && cursor);
@@ -644,7 +702,8 @@ const getPlantsPageCached = unstable_cache(
   async (
     category: string,
     cursor: string,
-    pageSize: number
+    pageSize: number,
+    lang: SiteLanguage
   ): Promise<PlantsPageResult> => {
     const response = await queryPlants({
       category: category || undefined,
@@ -655,7 +714,7 @@ const getPlantsPageCached = unstable_cache(
     const imageMap = await readImageMap();
     const plants = response.results
       .filter((p) => p.object === "page")
-      .map((p) => mapPlant(p, imageMap));
+      .map((p) => mapPlant(p, imageMap, lang));
 
     return {
       plants,
@@ -672,7 +731,7 @@ const getPlantsPageCached = unstable_cache(
 
 // Cached slug lookup for details page.
 const getPlantBySlugCached = unstable_cache(
-  async (slug: string): Promise<Plant | null> => {
+  async (slug: string, lang: SiteLanguage): Promise<Plant | null> => {
     if (!slug) {
       return null;
     }
@@ -684,7 +743,7 @@ const getPlantBySlugCached = unstable_cache(
 
     const page = response.results.find((p) => p.object === "page");
     const imageMap = await readImageMap();
-    return page ? mapPlant(page, imageMap) : null;
+    return page ? mapPlant(page, imageMap, lang) : null;
   },
   ["notion-plant-by-slug"],
   {
@@ -695,7 +754,7 @@ const getPlantBySlugCached = unstable_cache(
 
 // Cached nursery content: first heading, first paragraph and first image.
 const getNurseryProfileCached = unstable_cache(
-  async (): Promise<NurseryProfile> => {
+  async (lang: SiteLanguage): Promise<NurseryProfile> => {
     const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
 
     const children = await notionLegacy.request<NotionBlocksResponse>({
@@ -710,7 +769,7 @@ const getNurseryProfileCached = unstable_cache(
       .find(Boolean);
 
     const profile: NurseryProfile = {
-      title: firstHeading || "Sobre nuestro vivero",
+      title: localizedValue(lang, firstHeading || "Sobre nuestro vivero", "About our nursery"),
       description: "",
       image: "",
       phone: "",
@@ -795,7 +854,7 @@ const getNurseryProfileCached = unstable_cache(
 );
 
 const getNurseryAboutCached = unstable_cache(
-  async (): Promise<NurseryAbout> => {
+  async (lang: SiteLanguage): Promise<NurseryAbout> => {
     const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
 
     const children = await notionLegacy.request<NotionBlocksResponse>({
@@ -806,10 +865,12 @@ const getNurseryAboutCached = unstable_cache(
     const blocks = children.results ?? [];
 
     return {
-      title: "Sobre Nuestro Vivero",
+      title: lang === "en" ? "About Our Nursery" : "Sobre Nuestro Vivero",
       body:
         getSectionBodyAfterHeading(blocks, "Sobre Nosotros") ||
+        getSectionBodyAfterHeading(blocks, "About Us") ||
         getSectionBodyAfterHeading(blocks, "Sobre nuestro vivero") ||
+        getSectionBodyAfterHeading(blocks, "About our nursery") ||
         blocks.map(getParagraphText).find(Boolean) ||
         "",
     };

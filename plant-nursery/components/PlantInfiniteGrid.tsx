@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantCard from "@/components/PlantCard";
 import type { Plant } from "@/types/plant";
+import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type PlantInfiniteGridProps = {
   initialPlants: Plant[];
@@ -13,6 +14,7 @@ type PlantInfiniteGridProps = {
   query: string;
   nativo?: boolean;
   disableAutoLoad?: boolean;
+  lang?: SiteLanguage;
 };
 
 type PlantsApiResponse = {
@@ -33,7 +35,9 @@ export default function PlantInfiniteGrid({
   query,
   nativo,
   disableAutoLoad = false,
+  lang: rawLang = "es",
 }: PlantInfiniteGridProps) {
+  const lang = normalizeSiteLanguage(rawLang);
   const [plants, setPlants] = useState<Plant[]>(filterAvailablePlants(initialPlants));
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
@@ -66,6 +70,7 @@ export default function PlantInfiniteGrid({
         nativo,
         cursor: nextCursor,
         pageSize: 12,
+        lang,
       };
 
       const response = await fetch("/api/plants", {
@@ -114,7 +119,7 @@ export default function PlantInfiniteGrid({
     } finally {
       setIsLoading(false);
     }
-  }, [category, hasMore, isLoading, nativo, nextCursor, query]);
+  }, [category, hasMore, isLoading, lang, nativo, nextCursor, query]);
 
   useEffect(() => {
     if (disableAutoLoad) {
@@ -202,6 +207,7 @@ export default function PlantInfiniteGrid({
               plant={plant}
               priority={index === 0}
               animationDelayMs={(index % 12) * 45}
+              lang={lang}
             />
           </div>
         ))}

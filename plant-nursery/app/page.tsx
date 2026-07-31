@@ -5,6 +5,7 @@ import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/not
 import PlantCatalog from "@/components/PlantCatalog";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 export const revalidate = 60;
 
@@ -13,6 +14,7 @@ type PageSearchParams = {
   cursor?: string;
   q?: string;
   nativo?: string;
+  lang?: string;
 };
 
 function hasSearchParams(searchParams?: PageSearchParams): boolean {
@@ -24,13 +26,54 @@ function hasSearchParams(searchParams?: PageSearchParams): boolean {
   );
 }
 
+const copy: Record<SiteLanguage, {
+  title: string;
+  description: string;
+  heroTitle: string;
+  heroDescription: string;
+  aboutButton: string;
+  catalogFallback: string;
+  profileAlt: string;
+  whatsapp: string;
+  directions: string;
+  languageLabel: string;
+  languageLabelShort: string;
+}> = {
+  es: {
+    title: "Vivero Karu-lemu | Plantas nativas y exoticas en catalogo online",
+    description: "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu: precios, disponibilidad y caracteristicas de cada especie.",
+    heroTitle: "Vivero \"karū-lemu\" - plantas nativas y exóticas",
+    heroDescription: "Explora el catalogo y descubre plantas nativas y exoticas para tu espacio.",
+    aboutButton: "Sobre Nuestro Vivero",
+    catalogFallback: "Explora el catalogo y descubre plantas nativas y exoticas para tu espacio.",
+    profileAlt: "Vivero de plantas nativas y exoticas Carilemu",
+    whatsapp: "Escribir por WhatsApp",
+    directions: "Ver direccion en mapa",
+    languageLabel: "English",
+    languageLabelShort: "EN",
+  },
+  en: {
+    title: "Vivero Karu-lemu | Native and exotic plants online catalog",
+    description: "Browse the Vivero Karu-lemu catalog of native and exotic plants: prices, availability, and details for each species.",
+    heroTitle: "Vivero \"karū-lemu\" - native and exotic plants",
+    heroDescription: "Browse the catalog and discover native and exotic plants for your space.",
+    aboutButton: "About Our Nursery",
+    catalogFallback: "Browse the catalog and discover native and exotic plants for your space.",
+    profileAlt: "Vivero Karilemu native and exotic plants nursery",
+    whatsapp: "Contact via WhatsApp",
+    directions: "View directions on map",
+    languageLabel: "Español",
+    languageLabelShort: "ES",
+  },
+};
+
 export async function generateMetadata(
   { searchParams }: { searchParams: Promise<PageSearchParams> }
 ): Promise<Metadata> {
   const params = await searchParams;
-  const title = "Vivero Karu-lemu | Plantas nativas y exoticas en catalogo online";
-  const description =
-    "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu: precios, disponibilidad y caracteristicas de cada especie.";
+  const lang = normalizeSiteLanguage(params.lang);
+  const title = copy[lang].title;
+  const description = copy[lang].description;
 
   if (hasSearchParams(params)) {
     return {
@@ -45,7 +88,7 @@ export async function generateMetadata(
     };
   }
 
-  const nurseryProfile = await getNurseryProfile();
+  const nurseryProfile = await getNurseryProfile(lang);
 
   return {
     title,
@@ -69,7 +112,9 @@ function sanitizePhoneToWa(value: string): string {
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { category, cursor, q, nativo } = await searchParams;
+  const params = await searchParams;
+  const { category, cursor, q, nativo } = params;
+  const lang = normalizeSiteLanguage(params.lang);
 
   const activeCategory = category?.trim() || "";
   const activeCursor = cursor?.trim() || "";
@@ -85,6 +130,7 @@ export default async function Home({ searchParams }: HomeProps) {
       query: activeQuery || undefined,
       nativo: activeNativo,
       pageSize: 12,
+      lang,
     }),
     searchMode
       ? Promise.resolve({
@@ -95,7 +141,7 @@ export default async function Home({ searchParams }: HomeProps) {
           location: "",
           mapUrl: "",
         })
-      : getNurseryProfile(),
+        : getNurseryProfile(lang),
   ]);
 
   const waPhone = sanitizePhoneToWa(nurseryProfile.phone);
@@ -136,7 +182,7 @@ export default async function Home({ searchParams }: HomeProps) {
         {nurseryProfile.image && (
           <Image
             src={nurseryProfile.image}
-            alt="Vivero de plantas nativas y exoticas Carilemu"
+            alt={copy[lang].profileAlt}
             fill
             priority
             unoptimized
@@ -150,12 +196,11 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl items-end px-4 pb-8 sm:px-6 sm:pb-10 md:px-10 md:pb-10 md:pt-10">
           <div className="mapuche-hero-overlay w-full rounded-3xl p-5 backdrop-blur-sm sm:p-6 md:p-8">
             <h1 className="text-3xl font-bold leading-tight text-[#f8f0e4] md:text-5xl">
-              Vivero &quot;karū-lemu&quot; -
-plantas nativas y exóticas
+              {copy[lang].heroTitle}
             </h1>
 
             <p className="mt-4 whitespace-pre-line text-sm leading-7 text-white md:text-lg">
-              {nurseryProfile.description || "Explora el catalogo y descubre plantas nativas y exoticas para tu espacio."}
+              {nurseryProfile.description || copy[lang].catalogFallback}
             </p>
 
             <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#f2dcc0]">
@@ -164,13 +209,13 @@ plantas nativas y exóticas
 
             {nurseryProfile.phone && (
               <p className="mt-4 text-sm text-white/90">
-                Telefono: {nurseryProfile.phone}
+                {lang === "en" ? "Phone" : "Telefono"}: {nurseryProfile.phone}
               </p>
             )}
 
             {nurseryProfile.location && (
               <p className="text-sm text-white/90">
-                Ubicacion: {nurseryProfile.location}
+                {lang === "en" ? "Location" : "Ubicacion"}: {nurseryProfile.location}
               </p>
             )}
 
@@ -183,7 +228,7 @@ plantas nativas y exóticas
                     rel="noreferrer"
                     className="mapuche-button-primary"
                   >
-                    Escribir por WhatsApp
+                    {copy[lang].whatsapp}
                   </a>
                 )}
 
@@ -194,12 +239,12 @@ plantas nativas y exóticas
                     rel="noreferrer"
                     className="mapuche-button-secondary"
                   >
-                    Ver direccion en mapa
+                    {copy[lang].directions}
                   </a>
                 )}
 
-                <Link href="/sobre-nuestro-vivero" className="mapuche-button-secondary">
-                  Sobre Nuestro Vivero
+                <Link href={appendLanguageParam("/sobre-nuestro-vivero", lang)} className="mapuche-button-secondary">
+                  {copy[lang].aboutButton}
                 </Link>
               </div>
             )}
@@ -238,6 +283,7 @@ plantas nativas y exóticas
           initialQuery={activeQuery}
           initialNativo={activeNativo}
           initialPage={plantsPage}
+          lang={lang}
         />
       </div>
 

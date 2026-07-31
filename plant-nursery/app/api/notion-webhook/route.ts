@@ -10,6 +10,18 @@ import { PLANTS_REVALIDATE_TAG } from "@/lib/notion";
 import { readImageMap, writeImageMap } from "@/lib/image-map";
 import { plants } from "@/lib/db/schema";
 
+type PageProperties = Record<
+  string,
+  | {
+      title?: Array<{ plain_text?: string }>;
+      rich_text?: Array<{ plain_text?: string }>;
+      select?: { name?: string } | null;
+      checkbox?: boolean;
+      number?: number | null;
+    }
+  | undefined
+>;
+
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
   notionVersion: "2022-06-28",
@@ -92,31 +104,45 @@ function mapPageToPlant(
   page: NonNullable<Awaited<ReturnType<typeof fetchPage>>>,
   imageMap: Record<string, { cdn?: string[] }>
 ) {
+  const properties = page.properties as PageProperties;
   const slug =
-    slugify(textOf(page.properties?.Slug?.rich_text)) ||
-    slugify(textOf(page.properties?.Title?.title)) ||
+    slugify(textOf(properties?.Slug?.rich_text)) ||
+    slugify(textOf(properties?.Title?.title)) ||
     page.id;
 
   return {
     id: page.id,
     slug,
-    name: textOf(page.properties?.Title?.title),
-    description: textOf(page.properties?.Description?.rich_text),
-    flor: textOf(page.properties?.Flor?.rich_text),
-    riego: textOf(page.properties?.Riego?.rich_text),
-    suelo: textOf(page.properties?.Suelo?.rich_text),
-    florece: textOf(page.properties?.Florece?.rich_text),
-    exposicion: textOf(page.properties?.Exposicion?.rich_text),
-    fruta: textOf(page.properties?.Fruta?.rich_text),
-    tamano: textOf(page.properties?.Tamano?.rich_text),
-    utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
-    propagacion: textOf(page.properties?.Propagacion?.rich_text),
-    medicinal: textOf(page.properties?.Medicinal?.rich_text),
-    category: page.properties?.Category?.select?.name || "",
-    nativo: page.properties?.Nativo?.checkbox ?? false,
-    price: page.properties?.Price?.number || 0,
-    amount: page.properties?.Amount?.number || 0,
-    available: page.properties?.Available?.checkbox ?? false,
+    name: textOf(properties?.Title?.title),
+    name_en: textOf(properties?.title_en?.title),
+    nameEn: textOf(properties?.title_en?.title),
+    description: textOf(properties?.Description?.rich_text),
+    descriptionEn: textOf(properties?.description_en?.rich_text),
+    flor: textOf(properties?.Flor?.rich_text),
+    florEn: textOf(properties?.flor_en?.rich_text),
+    riego: textOf(properties?.Riego?.rich_text),
+    riegoEn: textOf(properties?.riego_en?.rich_text),
+    suelo: textOf(properties?.Suelo?.rich_text),
+    sueloEn: textOf(properties?.suelo_en?.rich_text),
+    florece: textOf(properties?.Florece?.rich_text),
+    floreceEn: textOf(properties?.florece_en?.rich_text),
+    exposicion: textOf(properties?.Exposicion?.rich_text),
+    exposicionEn: textOf(properties?.exposicion_en?.rich_text),
+    fruta: textOf(properties?.Fruta?.rich_text),
+    frutaEn: textOf(properties?.fruta_en?.rich_text),
+    tamano: textOf(properties?.Tamano?.rich_text),
+    tamanoEn: textOf(properties?.tamano_en?.rich_text),
+    utilizacion: textOf(properties?.Utilizacion?.rich_text),
+    utilizacionEn: textOf(properties?.utilizacion_en?.rich_text),
+    propagacion: textOf(properties?.Propagacion?.rich_text),
+    propagacionEn: textOf(properties?.propagacion_en?.rich_text),
+    medicinal: textOf(properties?.Medicinal?.rich_text),
+    medicinalEn: textOf(properties?.medicinal_en?.rich_text),
+    category: properties?.Category?.select?.name || "",
+    nativo: properties?.Nativo?.checkbox ?? false,
+    price: properties?.Price?.number || 0,
+    amount: properties?.Amount?.number || 0,
+    available: properties?.Available?.checkbox ?? false,
     images: imageMap[slug]?.cdn?.length ? imageMap[slug].cdn : [],
     syncedAt: new Date(),
   };
@@ -131,10 +157,46 @@ async function upsertPlant(pageId: string): Promise<void> {
     ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion TEXT NOT NULL DEFAULT ''
   `);
   await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS name_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS description_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS flor_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS riego_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS suelo_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS florece_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS exposicion_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS fruta_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS tamano_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
     ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''
   `);
   await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion_en TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
     ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal TEXT NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal_en TEXT NOT NULL DEFAULT ''
   `);
 
   const page = await fetchPage(pageId);
@@ -153,17 +215,29 @@ async function upsertPlant(pageId: string): Promise<void> {
       set: {
         slug: plantData.slug,
         name: plantData.name,
+        nameEn: plantData.nameEn,
         description: plantData.description,
+        descriptionEn: plantData.descriptionEn,
         flor: plantData.flor,
+        florEn: plantData.florEn,
         riego: plantData.riego,
+        riegoEn: plantData.riegoEn,
         suelo: plantData.suelo,
+        sueloEn: plantData.sueloEn,
         florece: plantData.florece,
+        floreceEn: plantData.floreceEn,
         exposicion: plantData.exposicion,
+        exposicionEn: plantData.exposicionEn,
         fruta: plantData.fruta,
+        frutaEn: plantData.frutaEn,
         tamano: plantData.tamano,
+        tamanoEn: plantData.tamanoEn,
         utilizacion: plantData.utilizacion,
+        utilizacionEn: plantData.utilizacionEn,
         propagacion: plantData.propagacion,
+        propagacionEn: plantData.propagacionEn,
         medicinal: plantData.medicinal,
+        medicinalEn: plantData.medicinalEn,
         category: plantData.category,
         nativo: plantData.nativo,
         price: plantData.price,

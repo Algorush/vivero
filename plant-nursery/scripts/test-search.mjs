@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import OpenAI from "openai";
+import { pipeline } from "@huggingface/transformers";
 
 function forceEnv(fileName) {
   const fullPath = path.resolve(process.cwd(), fileName);
@@ -17,7 +17,26 @@ function forceEnv(fileName) {
 forceEnv(".env.local");
 
 const sql = neon(process.env.NEON_DATABASE_URL);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const HF_MODEL = "Xenova/all-MiniLM-L6-v2";
+
+let extractorPromise;
+
+async function getExtractor() {
+  if (!extractorPromise) {
+    extractorPromise = pipeline("feature-extraction", HF_MODEL);
+  }
+
+  return extractorPromise;
+}
+
+async function generateEmbedding(query) {
+  const extractor = await getExtractor();
+  const data = await extractor(query, { pooling: "mean", normalize: true });
+  if (data?.data instanceof Float32Array || data?.data instanceof Float64Array) {
+    return Array.from(data.data);
+  }
+  return Array.isArray(data) && typeof data[0] === "number" ? data : Array.from(data.data ?? []);
+}
 
 const queries = ["planta para sombra", "arbol nativo", "riego minimo", "flores rojas"];
 
@@ -25,8 +44,8 @@ for (const query of queries) {
   console.log(`\n=== "${query}" ===`);
 
   // Semantic search
-  const emb = await openai.embeddings.create({ model: "text-embedding-3-small", input: query });
-  const vec = `[${emb.data[0].embedding.join(",")}]`;
+  const emb = await generateEmbedding(query);
+  const vec = `[${emb.join(",")}]`;
 
   const rows = await sql.query(
     `SELECT slug, name, category, nativo, embedding <=> $1::vector AS distance

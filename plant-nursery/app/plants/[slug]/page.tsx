@@ -7,11 +7,13 @@ import AddToCartButton from "@/components/AddToCartButton";
 
 import { getPlantBySlug } from "@/lib/notion";
 import { SITE_URL } from "@/lib/site-config";
+import { appendLanguageParam, normalizeSiteLanguage } from "@/lib/site-language";
 
 type PlantPageProps = {
   params: Promise<{
     slug: string;
   }>;
+  searchParams?: Promise<{ lang?: string }>;
 };
 
 function truncate(value: string, maxLength: number): string {
@@ -24,9 +26,11 @@ function truncate(value: string, maxLength: number): string {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PlantPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const plant = await getPlantBySlug(slug);
+  const lang = normalizeSiteLanguage((await searchParams)?.lang);
+  const plant = await getPlantBySlug(slug, lang);
 
   if (!plant) {
     return {};
@@ -35,7 +39,9 @@ export async function generateMetadata({
   const title = plant.category ? `${plant.name} - ${plant.category}` : plant.name;
   const description = plant.description
     ? truncate(plant.description, 160)
-    : `Conoce ${plant.name} en nuestro vivero: caracteristicas, cuidados y disponibilidad.`;
+    : lang === "en"
+      ? `Discover ${plant.name} in our nursery: characteristics, care, and availability.`
+      : `Conoce ${plant.name} en nuestro vivero: caracteristicas, cuidados y disponibilidad.`;
   const image = plant.images?.[0] || plant.image;
   const url = `${SITE_URL}/plants/${plant.slug}`;
 
@@ -59,9 +65,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function PlantPage({ params }: PlantPageProps) {
+export default async function PlantPage({ params, searchParams }: PlantPageProps) {
   const { slug } = await params;
-  const plant = await getPlantBySlug(slug);
+  const lang = normalizeSiteLanguage((await searchParams)?.lang);
+  const plant = await getPlantBySlug(slug, lang);
 
   if (!plant) {
     notFound();
@@ -71,16 +78,16 @@ export default async function PlantPage({ params }: PlantPageProps) {
     typeof value === "string" ? value.trim() : "";
 
   const details = [
-    { label: "Flor", value: normalizeDetailValue(plant.flor) },
-    { label: "Riego", value: normalizeDetailValue(plant.riego) },
-    { label: "Suelo", value: normalizeDetailValue(plant.suelo) },
-    { label: "Florece", value: normalizeDetailValue(plant.florece) },
-    { label: "Exposicion", value: normalizeDetailValue(plant.exposicion) },
-    { label: "Fruta", value: normalizeDetailValue(plant.fruta) },
-    { label: "Tamano", value: normalizeDetailValue(plant.tamano) },
-    { label: "Utilizacion", value: normalizeDetailValue(plant.utilizacion) },
-    { label: "Propagacion", value: normalizeDetailValue(plant.propagacion) },
-    { label: "Medicinal", value: normalizeDetailValue(plant.medicinal) },
+    { label: lang === "en" ? "Flower" : "Flor", value: normalizeDetailValue(plant.flor) },
+    { label: lang === "en" ? "Watering" : "Riego", value: normalizeDetailValue(plant.riego) },
+    { label: lang === "en" ? "Soil" : "Suelo", value: normalizeDetailValue(plant.suelo) },
+    { label: lang === "en" ? "Blooms" : "Florece", value: normalizeDetailValue(plant.florece) },
+    { label: lang === "en" ? "Exposure" : "Exposicion", value: normalizeDetailValue(plant.exposicion) },
+    { label: lang === "en" ? "Fruit" : "Fruta", value: normalizeDetailValue(plant.fruta) },
+    { label: lang === "en" ? "Size" : "Tamano", value: normalizeDetailValue(plant.tamano) },
+    { label: lang === "en" ? "Use" : "Utilizacion", value: normalizeDetailValue(plant.utilizacion) },
+    { label: lang === "en" ? "Propagation" : "Propagacion", value: normalizeDetailValue(plant.propagacion) },
+    { label: lang === "en" ? "Medicinal" : "Medicinal", value: normalizeDetailValue(plant.medicinal) },
   ].filter((item) => item.value.length > 0);
 
   const productJsonLd = {
@@ -114,7 +121,9 @@ export default async function PlantPage({ params }: PlantPageProps) {
       />
 
       <p className="mb-4">
-        <Link href="/">Volver al catalogo</Link>
+        <Link href={appendLanguageParam("/", lang)}>
+          {lang === "en" ? "Back to catalog" : "Volver al catalogo"}
+        </Link>
       </p>
 
       <h1 className="text-3xl font-bold mb-4">{plant.name}</h1>
@@ -142,12 +151,12 @@ export default async function PlantPage({ params }: PlantPageProps) {
       </div>
 
       <p className="text-gray-600 mb-2">
-        Categoría: {plant.category}
+        {lang === "en" ? "Category" : "Categoría"}: {plant.category}
       </p>
 
       {plant.price > 0 && (
         <p className="mb-2 text-lg font-semibold text-green-700">
-          Precio: ${plant.price}
+          {lang === "en" ? "Price" : "Precio"}: ${plant.price}
         </p>
       )}
 
@@ -157,7 +166,9 @@ export default async function PlantPage({ params }: PlantPageProps) {
 
       {details.length > 0 && (
         <section className="mt-6 rounded-2xl border border-[#d8c0a0] bg-[#fff9f0] p-4">
-          <h2 className="mb-3 text-lg font-semibold text-[#1f1a17]">Caracteristicas</h2>
+          <h2 className="mb-3 text-lg font-semibold text-[#1f1a17]">
+            {lang === "en" ? "Characteristics" : "Caracteristicas"}
+          </h2>
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {details.map((item) => (
               <div key={item.label}>

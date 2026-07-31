@@ -2,20 +2,24 @@ import Link from "next/link";
 import ImageCarousel from "@/components/ImageCarousel";
 import AddToCartButton from "@/components/AddToCartButton";
 import { Plant } from "@/types/plant";
+import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type PlantCardProps = {
   plant: Plant;
   priority?: boolean;
   animationDelayMs?: number;
+  lang?: SiteLanguage;
 };
 
 export default function PlantCard({
   plant,
   priority = false,
   animationDelayMs = 0,
+  lang: rawLang = "es",
 }: PlantCardProps) {
+  const lang = normalizeSiteLanguage(rawLang);
   return (
-    <Link href={`/plants/${plant.slug}`} className="block min-w-0">
+    <Link href={appendLanguageParam(`/plants/${plant.slug}`, lang)} className="block min-w-0">
       <div
         className="relative animate-card-in min-w-0 overflow-hidden rounded-2 bg-white text-[#1f1a17] shadow transition hover:shadow-lg motion-reduce:animate-none dark:bg-[#fffdf8] dark:text-[#1f1a17]"
         style={{ animationDelay: `${animationDelayMs}ms` }}

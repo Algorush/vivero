@@ -2,7 +2,7 @@
  * Syncs all plants from Notion to Neon Postgres.
  * For each plant:
  *   1. Upserts all fields
- *   2. Generates OpenAI embedding if text changed
+ *   2. Generates HuggingFace embedding if text changed
  *   3. Also syncs images to R2 (reuses existing logic)
  *
  * Usage: npm run sync:db
@@ -18,6 +18,7 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // Fix fetch for Node.js (neon serverless needs it globally available)
 import { plants } from "../lib/db/schema.ts";
+import { buildStructuredEmbeddingText } from "../lib/embedding-text.ts";
 
 // --- Load .env ---------------------------------------------------------------
 function loadEnv(fileName) {
@@ -158,28 +159,26 @@ async function readImageMap() {
 
 // --- Embedding ---------------------------------------------------------------
 function buildEmbeddingText(plant) {
-  return [
-    plant.name,
-    plant.category,
-    plant.description,
-    plant.flor,
-    plant.riego,
-    plant.suelo,
-    plant.florece,
-    plant.exposicion,
-    plant.fruta,
-    plant.tamano,
-    plant.utilizacion,
-    plant.propagacion,
-    plant.medicinal,
-  ]
-    .filter(Boolean)
-    .join(". ");
+  return buildStructuredEmbeddingText({
+    name: plant.name,
+    category: plant.category,
+    description: plant.description,
+    flor: plant.flor,
+    riego: plant.riego,
+    suelo: plant.suelo,
+    florece: plant.florece,
+    exposicion: plant.exposicion,
+    fruta: plant.fruta,
+    tamano: plant.tamano,
+    utilizacion: plant.utilizacion,
+    propagacion: plant.propagacion,
+    medicinal: plant.medicinal,
+  });
 }
 
 async function generateEmbedding(text) {
-  const { generateEmbedding: openaiEmbed } = await import("../lib/embeddings.ts");
-  return openaiEmbed(text);
+  const { generateEmbedding: hfEmbed } = await import("../lib/embeddings.ts");
+  return hfEmbed(text);
 }
 
 // --- Migrate (ensure schema) -------------------------------------------------
@@ -191,17 +190,29 @@ async function ensureSchema() {
       id TEXT PRIMARY KEY,
       slug TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL DEFAULT '',
+      name_en TEXT NOT NULL DEFAULT '',
       description TEXT NOT NULL DEFAULT '',
+      description_en TEXT NOT NULL DEFAULT '',
       flor TEXT NOT NULL DEFAULT '',
+      flor_en TEXT NOT NULL DEFAULT '',
       riego TEXT NOT NULL DEFAULT '',
+      riego_en TEXT NOT NULL DEFAULT '',
       suelo TEXT NOT NULL DEFAULT '',
+      suelo_en TEXT NOT NULL DEFAULT '',
       florece TEXT NOT NULL DEFAULT '',
+      florece_en TEXT NOT NULL DEFAULT '',
       exposicion TEXT NOT NULL DEFAULT '',
+      exposicion_en TEXT NOT NULL DEFAULT '',
       fruta TEXT NOT NULL DEFAULT '',
+      fruta_en TEXT NOT NULL DEFAULT '',
       tamano TEXT NOT NULL DEFAULT '',
+      tamano_en TEXT NOT NULL DEFAULT '',
       utilizacion TEXT NOT NULL DEFAULT '',
+      utilizacion_en TEXT NOT NULL DEFAULT '',
       propagacion TEXT NOT NULL DEFAULT '',
+      propagacion_en TEXT NOT NULL DEFAULT '',
       medicinal TEXT NOT NULL DEFAULT '',
+      medicinal_en TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
       nativo BOOLEAN NOT NULL DEFAULT false,
       price INTEGER NOT NULL DEFAULT 0,
@@ -210,7 +221,7 @@ async function ensureSchema() {
       images JSONB NOT NULL DEFAULT '[]'::jsonb,
       notion_updated_at TIMESTAMPTZ,
       synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      embedding vector(1536),
+      embedding vector(384),
       embedding_updated_at TIMESTAMPTZ
     )
   `;
@@ -220,23 +231,35 @@ async function ensureSchema() {
   await sql`CREATE INDEX IF NOT EXISTS plants_available_idx ON plants(available)`;
 
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS name_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS description_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS flor_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS riego_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS suelo_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS florece_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS exposicion_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS fruta_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS tamano_en TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS utilizacion_en TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS propagacion_en TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal_en TEXT NOT NULL DEFAULT ''`;
 
-  // Migrate embedding column if dimensions changed (e.g. 384 → 1536)
+  // Migrate embedding column if dimensions changed (e.g. 1536 → 384)
   // atttypmod for vector(N) = N + 4
   const colInfo = await sql`
     SELECT atttypmod FROM pg_attribute
     WHERE attrelid = 'plants'::regclass AND attname = 'embedding' AND attnum > 0
   `;
   const currentMod = Number(colInfo[0]?.atttypmod ?? -1);
-  const expectedMod = 1536 + 4; // 1540
+  const expectedMod = 384 + 4; // 388
   if (currentMod !== -1 && currentMod !== expectedMod) {
-    console.log(`Migrating embedding column (${currentMod - 4} → 1536 dims)...`);
+    console.log(`Migrating embedding column (${currentMod - 4} → 384 dims)...`);
     await sql`DROP INDEX IF EXISTS plants_embedding_idx`;
     await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding`;
     await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding_updated_at`;
-    await sql`ALTER TABLE plants ADD COLUMN embedding vector(1536)`;
+    await sql`ALTER TABLE plants ADD COLUMN embedding vector(384)`;
     await sql`ALTER TABLE plants ADD COLUMN embedding_updated_at TIMESTAMPTZ`;
     console.log("Migration done. All embeddings will be regenerated.");
   }
@@ -253,6 +276,7 @@ async function ensureSchema() {
 // --- Map Notion page to plant data -------------------------------------------
 function mapNotionPageToPlant(page, imageMap) {
   const titleText = textOf(page.properties?.Title?.title);
+  const titleTextEn = textOf(page.properties?.title_en?.title);
   const slugText = textOf(page.properties?.Slug?.rich_text);
   const slug = slugify(slugText || titleText) || page.id;
   const entry = imageMap[slug];
@@ -262,17 +286,29 @@ function mapNotionPageToPlant(page, imageMap) {
     id: page.id,
     slug,
     name: titleText,
+    nameEn: titleTextEn,
     description: textOf(page.properties?.Description?.rich_text),
+    descriptionEn: textOf(page.properties?.description_en?.rich_text),
     flor: textOf(page.properties?.Flor?.rich_text),
+    florEn: textOf(page.properties?.flor_en?.rich_text),
     riego: textOf(page.properties?.Riego?.rich_text),
+    riegoEn: textOf(page.properties?.riego_en?.rich_text),
     suelo: textOf(page.properties?.Suelo?.rich_text),
+    sueloEn: textOf(page.properties?.suelo_en?.rich_text),
     florece: textOf(page.properties?.Florece?.rich_text),
+    floreceEn: textOf(page.properties?.florece_en?.rich_text),
     exposicion: textOf(page.properties?.Exposicion?.rich_text),
+    exposicionEn: textOf(page.properties?.exposicion_en?.rich_text),
     fruta: textOf(page.properties?.Fruta?.rich_text),
+    frutaEn: textOf(page.properties?.fruta_en?.rich_text),
     tamano: textOf(page.properties?.Tamano?.rich_text),
+    tamanoEn: textOf(page.properties?.tamano_en?.rich_text),
     utilizacion: textOf(page.properties?.Utilizacion?.rich_text),
+    utilizacionEn: textOf(page.properties?.utilizacion_en?.rich_text),
     propagacion: textOf(page.properties?.Propagacion?.rich_text),
+    propagacionEn: textOf(page.properties?.propagacion_en?.rich_text),
     medicinal: textOf(page.properties?.Medicinal?.rich_text),
+    medicinalEn: textOf(page.properties?.medicinal_en?.rich_text),
     category: page.properties?.Category?.select?.name || "",
     nativo: page.properties?.Nativo?.checkbox ?? false,
     price: page.properties?.Price?.number || 0,
@@ -285,6 +321,7 @@ function mapNotionPageToPlant(page, imageMap) {
 
 // --- Main --------------------------------------------------------------------
 export async function main() {
+  const forceRebuildEmbeddings = process.env.FORCE_REGENERATE_EMBEDDINGS === "1";
   console.log("Ensuring DB schema...");
   await ensureSchema();
 
@@ -311,17 +348,29 @@ export async function main() {
           set: {
             slug: plantData.slug,
             name: plantData.name,
+            nameEn: plantData.nameEn,
             description: plantData.description,
+            descriptionEn: plantData.descriptionEn,
             flor: plantData.flor,
+            florEn: plantData.florEn,
             riego: plantData.riego,
+            riegoEn: plantData.riegoEn,
             suelo: plantData.suelo,
+            sueloEn: plantData.sueloEn,
             florece: plantData.florece,
+            floreceEn: plantData.floreceEn,
             exposicion: plantData.exposicion,
+            exposicionEn: plantData.exposicionEn,
             fruta: plantData.fruta,
+            frutaEn: plantData.frutaEn,
             tamano: plantData.tamano,
+            tamanoEn: plantData.tamanoEn,
             utilizacion: plantData.utilizacion,
+            utilizacionEn: plantData.utilizacionEn,
             propagacion: plantData.propagacion,
+            propagacionEn: plantData.propagacionEn,
             medicinal: plantData.medicinal,
+            medicinalEn: plantData.medicinalEn,
             category: plantData.category,
             nativo: plantData.nativo,
             price: plantData.price,
@@ -342,6 +391,7 @@ export async function main() {
         .limit(1);
 
       const needsEmbedding =
+        forceRebuildEmbeddings ||
         !existing[0]?.embeddingUpdatedAt ||
         !existing[0]?.embedding ||
         existing[0]?.name !== plantData.name;
@@ -349,23 +399,19 @@ export async function main() {
       if (needsEmbedding) {
         const embeddingText = buildEmbeddingText(plantData);
         if (embeddingText.trim()) {
-          if (!process.env.OPENAI_API_KEY) {
-            // Skip embeddings silently if API key not available
-          } else {
-            process.stdout.write(`  generating embedding for "${plantData.name}"... `);
-            try {
-              const embedding = await generateEmbedding(embeddingText);
-              await sql`
-                UPDATE plants
-                SET embedding = ${`[${embedding.join(",")}]`}::vector,
-                    embedding_updated_at = NOW()
-                WHERE id = ${page.id}
-              `;
-              embeddingsGenerated++;
-              console.log("ok");
-            } catch (embErr) {
-              console.log(`skipped (${embErr.message.slice(0, 60)})`);
-            }
+          process.stdout.write(`  generating embedding for "${plantData.name}"... `);
+          try {
+            const embedding = await generateEmbedding(embeddingText);
+            await sql`
+              UPDATE plants
+              SET embedding = ${`[${embedding.join(",")}]`}::vector,
+                  embedding_updated_at = NOW()
+              WHERE id = ${page.id}
+            `;
+            embeddingsGenerated++;
+            console.log("ok");
+          } catch (embErr) {
+            console.log(`skipped (${embErr.message.slice(0, 60)})`);
           }
         }
       }
