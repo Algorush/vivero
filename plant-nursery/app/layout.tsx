@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Manrope, Sora } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
@@ -56,7 +57,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
-          <DocumentLanguageSync />
+          <Suspense fallback={null}>
+            <DocumentLanguageSync />
+          </Suspense>
           {children}
           <CartButton />
           <CartDrawer whatsappPhone={nurseryProfile.phone} />
