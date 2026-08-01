@@ -2,6 +2,7 @@ export type PlantEmbeddingSource = {
   name?: string;
   category?: string;
   description?: string;
+  extraDescription?: string;
   flor?: string;
   riego?: string;
   suelo?: string;
@@ -31,6 +32,7 @@ export function buildStructuredEmbeddingText(
     `Nombre: ${cleanParagraph(plant.name)}`,
     `Categoría: ${cleanParagraph(plant.category)}`,
     section("Descripción", plant.description),
+    section("Descripción ampliada", plant.extraDescription),
     section("Flor", plant.flor),
     section("Riego", plant.riego),
     section("Suelo", plant.suelo),

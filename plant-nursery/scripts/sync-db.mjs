@@ -89,6 +89,121 @@ function textOf(items) {
   return (items ?? []).map((i) => i?.plain_text ?? "").join("").trim();
 }
 
+function normalizeKey(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function parseCsv(content) {
+  const rows = [];
+  let currentField = "";
+  let currentRow = [];
+  let inQuotes = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+    const nextChar = content[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentField += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+
+      currentRow.push(currentField);
+      if (currentRow.some((value) => value.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentField = "";
+      currentRow = [];
+      continue;
+    }
+
+    currentField += char;
+  }
+
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField);
+    if (currentRow.some((value) => value.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const [headerRow, ...dataRows] = rows;
+  return dataRows.map((row) => {
+    const record = {};
+    for (let index = 0; index < headerRow.length; index += 1) {
+      record[headerRow[index]] = row[index] ?? "";
+    }
+    return record;
+  });
+}
+
+function loadPlantDescriptions() {
+  const candidatePaths = [
+    path.resolve(process.cwd(), "plants-desc.csv"),
+    path.resolve(process.cwd(), "..", "plants-desc.csv"),
+    path.resolve(process.cwd(), "..", "..", "plants-desc.csv"),
+  ];
+
+  for (const filePath of candidatePaths) {
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const content = readFileSync(filePath, "utf8");
+    const rows = parseCsv(content);
+    const descriptions = new Map();
+
+    for (const row of rows) {
+      const description = String(row.descripcion ?? row.description ?? "").trim();
+      if (!description) {
+        continue;
+      }
+
+      const name = String(row.nombre ?? row.name ?? "").trim();
+      const scientificName = String(row.nombre_cientifico ?? row.scientific_name ?? "").trim();
+
+      if (name) {
+        descriptions.set(normalizeKey(name), description);
+      }
+
+      if (scientificName) {
+        descriptions.set(normalizeKey(scientificName), description);
+      }
+    }
+
+    console.log(`Loaded ${descriptions.size} plant descriptions from ${filePath}`);
+    return descriptions;
+  }
+
+  console.log("No plants-desc.csv file found; continuing without CSV descriptions.");
+  return new Map();
+}
+
 function getDatabaseId() {
   const id = process.env.NOTION_DATA_SOURCE_ID ?? process.env.NOTION_DB_ID;
   if (!id) throw new Error("Missing NOTION_DATA_SOURCE_ID");
@@ -158,11 +273,12 @@ async function readImageMap() {
 }
 
 // --- Embedding ---------------------------------------------------------------
-function buildEmbeddingText(plant) {
+function buildEmbeddingText(plant, extraDescription = "") {
   return buildStructuredEmbeddingText({
     name: plant.name,
     category: plant.category,
     description: plant.description,
+    extraDescription,
     flor: plant.flor,
     riego: plant.riego,
     suelo: plant.suelo,
@@ -329,6 +445,7 @@ export async function main() {
   const pages = await fetchAllPlants();
   console.log(`Found ${pages.length} plants.\n`);
 
+  const csvDescriptions = loadPlantDescriptions();
   const imageMap = await readImageMap();
 
   let upserted = 0;
@@ -337,6 +454,9 @@ export async function main() {
 
   for (const page of pages) {
     const plantData = mapNotionPageToPlant(page, imageMap);
+    const extraDescription = csvDescriptions.get(normalizeKey(plantData.name))
+      || csvDescriptions.get(normalizeKey(plantData.slug))
+      || "";
 
     try {
       // Upsert plant data
@@ -397,7 +517,7 @@ export async function main() {
         existing[0]?.name !== plantData.name;
 
       if (needsEmbedding) {
-        const embeddingText = buildEmbeddingText(plantData);
+        const embeddingText = buildEmbeddingText(plantData, extraDescription);
         if (embeddingText.trim()) {
           process.stdout.write(`  generating embedding for "${plantData.name}"... `);
           try {
