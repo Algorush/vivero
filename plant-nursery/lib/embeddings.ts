@@ -3,9 +3,14 @@
  * Model: Xenova/all-MiniLM-L6-v2, 384 dimensions.
  */
 
-import { pipeline } from "@huggingface/transformers";
+// @ts-ignore - direct web bundle import avoids the Node-only ONNX runtime path on Vercel.
+import { env, pipeline } from "../node_modules/@huggingface/transformers/dist/transformers.web.js";
 
 const HF_MODEL = "Xenova/all-MiniLM-L6-v2";
+
+env.allowRemoteModels = true;
+env.allowLocalModels = true;
+env.backends.onnx.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${env.version}/dist/`;
 
 export const EMBEDDING_DIMS = 384;
 
