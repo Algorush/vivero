@@ -1,16 +1,13 @@
 /**
  * Embedding generation via a local HuggingFace feature-extraction pipeline.
- * Model: Xenova/all-MiniLM-L6-v2, 384 dimensions.
+ * Model: Xenova/paraphrase-MiniLM-L3-v2, 384 dimensions.
  */
+import { env, pipeline } from "@huggingface/transformers";
 
-// @ts-ignore - direct web bundle import avoids the Node-only ONNX runtime path on Vercel.
-import { env, pipeline } from "../node_modules/@huggingface/transformers/dist/transformers.web.js";
-
-const HF_MODEL = "Xenova/all-MiniLM-L6-v2";
+const HF_MODEL = "Xenova/paraphrase-MiniLM-L3-v2";
 
 env.allowRemoteModels = true;
 env.allowLocalModels = true;
-env.backends.onnx.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${env.version}/dist/`;
 
 export const EMBEDDING_DIMS = 384;
 
@@ -108,7 +105,7 @@ function normalizeEmbeddingResponse(payload: unknown): number[] {
 }
 
 /**
- * Generate a 384-dimensional embedding via HuggingFace's all-MiniLM-L6-v2.
+ * Generate a 384-dimensional embedding via HuggingFace's paraphrase-MiniLM-L3-v2.
  * Results are cached in memory — the same query never hits the API twice.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {

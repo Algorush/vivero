@@ -41,7 +41,7 @@ export const plants = pgTable(
     // Timestamps
     notionUpdatedAt: timestamp("notion_updated_at", { withTimezone: true }),
     syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
-    // pgvector embedding (HuggingFace all-MiniLM-L6-v2 = 384 dimensions)
+    // pgvector embedding (HuggingFace paraphrase-MiniLM-L3-v2 = 384 dimensions)
     // Stored as text in Drizzle, handled as raw SQL for pgvector operations
     embeddingUpdatedAt: timestamp("embedding_updated_at", { withTimezone: true }),
   },
