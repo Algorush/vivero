@@ -25,7 +25,7 @@ export default function PlantCard({
         style={{ animationDelay: `${animationDelayMs}ms` }}
       >
         {plant.images?.length > 0 && (
-          <div className="relative h-52 w-full overflow-hidden rounded-t-2xl">
+          <div className="relative h-70 w-full overflow-hidden rounded-t-2xl">
             <ImageCarousel
               images={plant.images}
               alt={plant.name}
@@ -37,7 +37,7 @@ export default function PlantCard({
           </div>
         )}
 
-        <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
+        <div className="flex flex-1 flex-col px-4 pb-3 pt-2">
           <h2 className="font-heading break-words text-xl font-semibold leading-tight text-[#1f1a17]">
             {plant.name}
           </h2>
