@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Manrope, Sora } from "next/font/google";
+import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { getNurseryProfile } from "@/lib/notion";
@@ -14,8 +14,8 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
-const sora = Sora({
-  variable: "--font-sora",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
 });
 
@@ -53,7 +53,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${manrope.variable} ${sora.variable} h-full antialiased`}
+      className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>

@@ -200,7 +200,7 @@ export default function PlantInfiniteGrid({
 
   return (
     <>
-      <div className="grid w-full max-w-full grid-cols-1 gap-6 overflow-hidden sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5 overflow-hidden sm:gap-6 lg:gap-7">
         {plants.map((plant, index) => (
           <div key={plant.id} className="min-w-0">
             <PlantCard
