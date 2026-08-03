@@ -97,7 +97,7 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       nativo,
       limit,
       offset,
-      hasHfKey: Boolean(process.env.HUGGINGFACE_API_KEY),
+      hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     });
   }
 
@@ -134,8 +134,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     };
   }
 
-  // Semantic search with pgvector if HuggingFace API key is set, fallback to FTS on any error
-  if (process.env.HUGGINGFACE_API_KEY) {
+  // Semantic search with pgvector if the Gemini API key is set, fallback to FTS on any error
+  if (process.env.GEMINI_API_KEY) {
     try {
       const result = await semanticSearch(query, { category, nativo, limit, offset, lang });
 
@@ -201,17 +201,28 @@ async function semanticSearch(
   const params: unknown[] = [vectorStr];
   let paramIndex = 2;
 
+  const countConditions: string[] = ["available = true"];
+  const countParams: unknown[] = [];
+  let countParamIndex = 1;
+
   if (options.category) {
     conditions.push(`category = $${paramIndex++}`);
     params.push(options.category);
+
+    countConditions.push(`category = $${countParamIndex++}`);
+    countParams.push(options.category);
   }
 
   if (options.nativo !== undefined) {
     conditions.push(`nativo = $${paramIndex++}`);
     params.push(options.nativo);
+
+    countConditions.push(`nativo = $${countParamIndex++}`);
+    countParams.push(options.nativo);
   }
 
   const whereClause = conditions.join(" AND ");
+  const countWhereClause = countConditions.join(" AND ");
 
   const rows = await sql.query(
     `SELECT *, embedding <=> $1::vector AS distance
@@ -222,14 +233,8 @@ async function semanticSearch(
     [...params, options.limit, options.offset]
   ) as Record<string, unknown>[];
 
-  // The count query's WHERE clause never references $1 (the vector), only
-  // $2/$3 for category/nativo when present. If no filters were added,
-  // whereClause has zero placeholders, so we must send zero params -
-  // otherwise Postgres errors with "bind message supplies N parameters,
-  // but prepared statement requires 0".
-  const countParams = paramIndex === 2 ? [] : params.slice(0, paramIndex - 1);
   const countRows = await sql.query(
-    `SELECT COUNT(*) as total FROM plants WHERE ${whereClause}`,
+    `SELECT COUNT(*) as total FROM plants WHERE ${countWhereClause}`,
     countParams
   ) as Record<string, unknown>[];
 

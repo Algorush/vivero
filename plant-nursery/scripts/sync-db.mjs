@@ -293,8 +293,8 @@ function buildEmbeddingText(plant, extraDescription = "") {
 }
 
 async function generateEmbedding(text) {
-  const { generateEmbedding: hfEmbed } = await import("../lib/embeddings.ts");
-  return hfEmbed(text);
+  const { generateEmbedding: geminiEmbed } = await import("../lib/embeddings.ts");
+  return geminiEmbed(text);
 }
 
 // --- Migrate (ensure schema) -------------------------------------------------
@@ -337,7 +337,7 @@ async function ensureSchema() {
       images JSONB NOT NULL DEFAULT '[]'::jsonb,
       notion_updated_at TIMESTAMPTZ,
       synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      embedding vector(384),
+      embedding vector(768),
       embedding_updated_at TIMESTAMPTZ
     )
   `;
@@ -362,20 +362,20 @@ async function ensureSchema() {
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE plants ADD COLUMN IF NOT EXISTS medicinal_en TEXT NOT NULL DEFAULT ''`;
 
-  // Migrate embedding column if dimensions changed (e.g. 1536 → 384)
+  // Migrate embedding column if dimensions changed (e.g. 384 → 768)
   // atttypmod for vector(N) = N + 4
   const colInfo = await sql`
     SELECT atttypmod FROM pg_attribute
     WHERE attrelid = 'plants'::regclass AND attname = 'embedding' AND attnum > 0
   `;
   const currentMod = Number(colInfo[0]?.atttypmod ?? -1);
-  const expectedMod = 384 + 4; // 388
+  const expectedMod = 768 + 4;
   if (currentMod !== -1 && currentMod !== expectedMod) {
-    console.log(`Migrating embedding column (${currentMod - 4} → 384 dims)...`);
+    console.log(`Migrating embedding column (${currentMod - 4} → 768 dims)...`);
     await sql`DROP INDEX IF EXISTS plants_embedding_idx`;
     await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding`;
     await sql`ALTER TABLE plants DROP COLUMN IF EXISTS embedding_updated_at`;
-    await sql`ALTER TABLE plants ADD COLUMN embedding vector(384)`;
+    await sql`ALTER TABLE plants ADD COLUMN embedding vector(768)`;
     await sql`ALTER TABLE plants ADD COLUMN embedding_updated_at TIMESTAMPTZ`;
     console.log("Migration done. All embeddings will be regenerated.");
   }
