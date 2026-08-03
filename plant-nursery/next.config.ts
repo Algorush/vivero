@@ -17,11 +17,16 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Include data/ directory and the native onnxruntime-node binaries in the
+  // Include data/ directory and the native onnxruntime-node binary in the
   // serverless function bundle on Vercel (Next's file tracer doesn't detect
-  // these since onnxruntime-node loads them via a computed require() path).
+  // it since onnxruntime-node loads it via a computed require() path).
+  // Vercel's serverless functions run on Linux x64, so only that platform's
+  // binary is needed - the package ships prebuilt binaries for every OS/arch
+  // (win32, darwin, linux x64/arm64), and including all of them was bloating
+  // every function (even unrelated ones like /_not-found, since they share
+  // the root layout's trace) by ~185MB of binaries that can never run there.
   outputFileTracingIncludes: {
-    "/": ["./data/**/*", "./node_modules/onnxruntime-node/bin/**/*"],
+    "/": ["./data/**/*", "./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/**/*"],
   },
 };
 
