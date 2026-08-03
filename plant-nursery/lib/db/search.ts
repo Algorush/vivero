@@ -134,10 +134,48 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     };
   }
 
+  const normalizedQuery = query.trim();
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  if (queryWords.length === 1) {
+    const textMatch = await sql.query(
+      `SELECT 1
+       FROM plants
+       WHERE available = true
+         AND (
+           name ILIKE $1 OR
+           name_en ILIKE $1 OR
+           description ILIKE $1 OR
+           description_en ILIKE $1
+         )
+         ${category ? `AND category = $2` : ""}
+         ${nativo !== undefined ? `AND nativo = $${category ? 3 : 2}` : ""}
+       LIMIT 1`,
+      [
+        `%${normalizedQuery}%`,
+        ...(category ? [category] : []),
+        ...(nativo !== undefined ? [nativo] : []),
+      ]
+    ) as Record<string, unknown>[];
+
+    if (textMatch.length === 0) {
+      if (shouldLog) {
+        console.log("[search] single-word query had no literal match; returning empty", {
+          pid: process.pid,
+          query: normalizedQuery,
+          category,
+          nativo,
+        });
+      }
+
+      return { plants: [], total: 0 };
+    }
+  }
+
   // Semantic search with pgvector if the Gemini API key is set, fallback to FTS on any error
   if (process.env.GEMINI_API_KEY) {
     try {
-      const result = await semanticSearch(query, { category, nativo, limit, offset, lang });
+      const result = await semanticSearch(normalizedQuery, { category, nativo, limit, offset, lang });
 
       if (shouldLog) {
         console.log("[search] mode=semantic", {
@@ -153,7 +191,7 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     }
   }
 
-  const result = await fullTextSearch(query, { category, nativo, limit, offset, lang });
+  const result = await fullTextSearch(normalizedQuery, { category, nativo, limit, offset, lang });
 
   if (shouldLog) {
     console.log("[search] mode=fts", {
