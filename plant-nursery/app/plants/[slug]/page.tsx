@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import ImageCarousel from "@/components/ImageCarousel";
 import AddToCartButton from "@/components/AddToCartButton";
 
-import { getPlantBySlug } from "@/lib/notion";
+import { getNurseryProfile, getPlantBySlug } from "@/lib/notion";
 import { SITE_URL } from "@/lib/site-config";
 import { appendLanguageParam, normalizeSiteLanguage } from "@/lib/site-language";
 
@@ -22,6 +22,10 @@ function truncate(value: string, maxLength: number): string {
     return trimmed;
   }
   return `${trimmed.slice(0, maxLength - 1).trimEnd()}\u2026`;
+}
+
+function sanitizePhoneToWa(value: string): string {
+  return value.replace(/[^\d]/g, "");
 }
 
 export async function generateMetadata({
@@ -68,11 +72,23 @@ export async function generateMetadata({
 export default async function PlantPage({ params, searchParams }: PlantPageProps) {
   const { slug } = await params;
   const lang = normalizeSiteLanguage((await searchParams)?.lang);
-  const plant = await getPlantBySlug(slug, lang);
+  const [plant, nurseryProfile] = await Promise.all([
+    getPlantBySlug(slug, lang),
+    getNurseryProfile(lang),
+  ]);
 
   if (!plant) {
     notFound();
   }
+
+  const waPhone = sanitizePhoneToWa(nurseryProfile.phone);
+  const consultMessage =
+    lang === "en"
+      ? `Hello, I would like to ask about the plant ${plant.name}.`
+      : `Hola, quiero consultar por la planta ${plant.name}.`;
+  const waHref = waPhone
+    ? `https://wa.me/${waPhone}${consultMessage ? `?text=${encodeURIComponent(consultMessage)}` : ""}`
+    : "";
 
   const normalizeDetailValue = (value: unknown): string =>
     typeof value === "string" ? value.trim() : "";
@@ -160,7 +176,29 @@ export default async function PlantPage({ params, searchParams }: PlantPageProps
         </p>
       )}
 
-      <AddToCartButton plant={plant} className="mb-4 w-full rounded-xl bg-[#2f5f4f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#254c40] sm:w-auto" />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <AddToCartButton plant={plant} className="w-full rounded-xl bg-[#2f5f4f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#254c40] sm:w-auto" />
+
+        {waHref && (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#2f5f4f] px-4 py-2 text-sm font-semibold text-[#2f5f4f] transition hover:bg-[#f1f7f4] sm:w-auto"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M19.05 4.94A9.94 9.94 0 0 0 12 2a9.96 9.96 0 0 0-8.67 14.88L2 22l5.27-1.3A9.96 9.96 0 1 0 19.05 4.94ZM12 20.2a8.2 8.2 0 0 1-4.17-1.14l-.3-.18-3.13.77.84-3.05-.2-.32A8.2 8.2 0 1 1 12 20.2Zm4.5-6.13c-.25-.12-1.45-.71-1.68-.8-.23-.08-.4-.12-.57.12-.16.25-.65.8-.8.96-.14.17-.3.18-.56.06-.25-.12-1.08-.4-2.05-1.28-.75-.66-1.25-1.48-1.4-1.73-.14-.25-.02-.38.1-.5.1-.1.25-.26.37-.39.12-.14.17-.24.25-.4.08-.17.04-.3-.02-.43-.06-.12-.57-1.37-.78-1.87-.2-.49-.4-.42-.57-.43h-.49a.95.95 0 0 0-.68.32c-.24.25-.92.9-.92 2.2 0 1.3.95 2.55 1.08 2.73.12.17 1.86 2.86 4.5 4 .63.27 1.13.43 1.52.55.64.2 1.22.17 1.68.1.52-.08 1.45-.6 1.66-1.18.2-.58.2-1.08.14-1.18-.05-.1-.22-.16-.47-.28Z" />
+            </svg>
+            {lang === "en" ? "Ask about this plant" : "Pedir consulta por esta planta"}
+          </a>
+        )}
+      </div>
 
       <p className="whitespace-pre-line">{plant.description}</p>
 

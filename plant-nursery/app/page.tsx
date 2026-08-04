@@ -120,7 +120,6 @@ export default async function Home({ searchParams }: HomeProps) {
   const activeCursor = cursor?.trim() || "";
   const activeQuery = q?.trim() || "";
   const activeNativo = nativo === "true" ? true : nativo === "false" ? false : undefined;
-  const searchMode = hasSearchParams({ category, cursor, q, nativo });
 
   const [categories, plantsPage, nurseryProfile] = await Promise.all([
     getPlantCategories(),
@@ -132,16 +131,7 @@ export default async function Home({ searchParams }: HomeProps) {
       pageSize: 12,
       lang,
     }),
-    searchMode
-      ? Promise.resolve({
-          description: "",
-          image: "",
-          phone: "",
-          whatsappText: "",
-          location: "",
-          mapUrl: "",
-        })
-        : getNurseryProfile(lang),
+    getNurseryProfile(lang),
   ]);
 
   const waPhone = sanitizePhoneToWa(nurseryProfile.phone);
