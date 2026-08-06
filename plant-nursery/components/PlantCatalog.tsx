@@ -243,37 +243,39 @@ export default function PlantCatalog({
         <div className="mapuche-paper-surface -mx-2 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:shadow-none md:backdrop-blur-0">
 
           {/* Row 1: title + search */}
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-1 flex items-center gap-2">
             <h2 className="shrink-0 text-base font-semibold text-[#1f1a17] md:text-lg">
               {catalogLabel ? (
                 <span className="ml-1.5 font-medium text-[#8b4f35]">{catalogLabel}</span>
               ) : null}
             </h2>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <input
-                type="search"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    runSearch();
-                  }
-                }}
-                placeholder="Buscar planta..."
-                className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
-                aria-label="Buscar plantas"
-              />
-              <button
-                type="button"
-                onClick={runSearch}
-                disabled={isFilterLoading}
-                className="flex shrink-0 items-center justify-center rounded-xl border border-[#d8c0a0] bg-[#f6ebda] px-3 py-1.5 text-sm text-[#1f1a17] transition hover:bg-[#ebdbc1] disabled:cursor-wait disabled:opacity-70"
-                aria-label="Buscar plantas"
-                title="Buscar"
-              >
-                <span aria-hidden="true">🔍</span>
-              </button>
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                  type="search"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      runSearch();
+                    }
+                  }}
+                  placeholder="Búsqueda inteligente: plantas para sombra, poca agua y jardín nativo..."
+                  className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
+                  aria-label="Buscar plantas"
+                />
+                <button
+                  type="button"
+                  onClick={runSearch}
+                  disabled={isFilterLoading}
+                  className="flex shrink-0 items-center justify-center rounded-xl border border-[#d8c0a0] bg-[#f6ebda] px-3 py-1.5 text-sm text-[#1f1a17] transition hover:bg-[#ebdbc1] disabled:cursor-wait disabled:opacity-70"
+                  aria-label="Buscar plantas"
+                  title="Buscar"
+                >
+                  <span aria-hidden="true">🔍</span>
+                </button>
+              </div>
             </div>
           </div>
 
