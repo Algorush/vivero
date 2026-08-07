@@ -46,6 +46,7 @@ export default function PlantInfiniteGrid({
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasUserScrolledRef = useRef(false);
+  const isSingleResult = plants.length === 1;
 
   useEffect(() => {
     setPlants(filterAvailablePlants(initialPlants));
@@ -202,7 +203,10 @@ export default function PlantInfiniteGrid({
     <>
       <div className="mx-auto grid w-full max-w-7xl grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 overflow-hidden sm:gap-5 lg:gap-6">
         {plants.map((plant, index) => (
-          <div key={plant.id} className="min-w-0">
+          <div
+            key={plant.id}
+            className={`min-w-0 ${isSingleResult ? "lg:w-1/2 lg:max-w-[50%] lg:mx-auto" : ""}`}
+          >
             <PlantCard
               plant={plant}
               priority={index === 0}
