@@ -9,29 +9,6 @@ type FloatingWhatsAppButtonProps = {
 export default function FloatingWhatsAppButton({
   href,
 }: FloatingWhatsAppButtonProps) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const heroSection = document.getElementById("home-hero");
-
-    const onScroll = () => {
-      const threshold = heroSection
-        ? Math.max(heroSection.offsetHeight - 120, 220)
-        : 220;
-
-      setIsVisible(window.scrollY > threshold);
-    };
-
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
-
   if (!href) {
     return null;
   }
@@ -42,14 +19,7 @@ export default function FloatingWhatsAppButton({
       target="_blank"
       rel="noreferrer"
       aria-label="Escribir por WhatsApp"
-      className={[
-        "fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-full",
-        "bg-[#25D366] text-white shadow-[0_14px_28px_rgba(10,80,38,0.35)]",
-        "transition-all duration-300 hover:scale-105 hover:shadow-[0_18px_36px_rgba(10,80,38,0.42)]",
-        isVisible
-          ? "pointer-events-auto translate-y-0 opacity-100"
-          : "pointer-events-none translate-y-5 opacity-0",
-      ].join(" ")}
+      className="fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_14px_28px_rgba(10,80,38,0.35)] transition-all duration-300 hover:scale-105 hover:shadow-[0_18px_36px_rgba(10,80,38,0.42)]"
     >
       <svg
         viewBox="0 0 24 24"

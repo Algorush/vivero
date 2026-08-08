@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/notion";
 import PlantCatalog from "@/components/PlantCatalog";
+import ImageCarousel from "@/components/ImageCarousel";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
@@ -111,6 +112,20 @@ function sanitizePhoneToWa(value: string): string {
   return value.replace(/[^\d]/g, "");
 }
 
+function buildHeroImages(primaryImage?: string): string[] {
+  const candidates = [
+    primaryImage,
+    "/notion-images/nursery/hero.jpg",
+    "/notion-images/plants/araucaria-araucana-6.jpg",
+    "/notion-images/plants/ulmo-eucryphia-cordifolia-1.jpg",
+    "/notion-images/plants/rododendro-virginia-richard-1.jpg",
+    "/notion-images/plants/arrayan-luma-apiculata-1.jpg",
+    "/notion-images/plants/campanilla-calceolaria-uniflora-1.jpg",
+  ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(candidates));
+}
+
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const { category, cursor, q, nativo } = params;
@@ -143,6 +158,7 @@ export default async function Home({ searchParams }: HomeProps) {
         : "";
 
   const mapHref = nurseryProfile.mapUrl?.trim() || "";
+  const heroImages = buildHeroImages(nurseryProfile.image);
 
   const localBusinessJsonLd = {
     "@context": "https://schema.org",
@@ -167,67 +183,44 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <section
         id="home-hero"
-        className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen min-h-[100svh] overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]"
+        className="relative left-1/2 right-1/2 -mx-[50vw] mb-8 w-screen overflow-hidden bg-gradient-to-br from-[#16352f] via-[#2f5f4f] to-[#8b4f35]"
       >
-        {nurseryProfile.image && (
-          <Image
-            src={nurseryProfile.image}
-            alt={copy[lang].profileAlt}
-            fill
-            priority
-            unoptimized
-            className="object-cover"
-            sizes="100vw"
-          />
-        )}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_34%),linear-gradient(180deg,rgba(22,53,47,0.2),rgba(22,53,47,0.48))]" />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-[#16352f]/45 via-[#2f5f4f]/30 to-[#16352f]/50" />
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 md:gap-8 md:px-8 md:py-8 lg:grid-cols-[1.02fr_0.98fr] lg:px-10 lg:py-10 lg:min-h-[88svh] lg:items-center">
+          <div className="order-2 lg:order-1">
+            <div className="mapuche-hero-overlay relative overflow-hidden rounded-2xl p-4 backdrop-blur-sm sm:rounded-[2rem] sm:p-6 md:p-8">
+              <div className="inline-flex rounded-full border border-[#f2dcc0]/45 bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[#f8f0e4] sm:px-3 sm:text-xs sm:tracking-[0.18em]">
+                {lang === "en" ? "Native plants · living catalog" : "Plantas nativas · catalogo vivo"}
+              </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl items-end px-4 pb-8 sm:px-6 sm:pb-10 md:px-10 md:pb-10 md:pt-10">
-          <div className="mapuche-hero-overlay w-full rounded-3xl p-5 backdrop-blur-sm sm:p-6 md:p-8">
-            <h1 className="text-3xl font-bold leading-tight text-[#f8f0e4] md:text-5xl">
-              {copy[lang].heroTitle}
-            </h1>
+              <h1 className="mt-3 text-2xl font-bold leading-tight text-[#f8f0e4] sm:mt-4 sm:text-3xl md:text-5xl">
+                {copy[lang].heroTitle}
+              </h1>
 
-            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-white md:text-lg">
-              {nurseryProfile.description || copy[lang].catalogFallback}
-            </p>
-
-            <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#f2dcc0]">
-              {/* Inspirado en la identidad mapuche de la Araucania */}
-            </p>
-
-            {nurseryProfile.phone && (
-              <p className="mt-4 text-sm text-white/90">
-                {lang === "en" ? "Phone" : "Telefono"}: {nurseryProfile.phone}
+              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white sm:mt-4 sm:leading-7 md:text-lg">
+                {nurseryProfile.description || copy[lang].catalogFallback}
               </p>
-            )}
 
-            {nurseryProfile.location && (
-              <p className="text-sm text-white/90">
-                {lang === "en" ? "Location" : "Ubicacion"}: {nurseryProfile.location}
-              </p>
-            )}
+              {(nurseryProfile.phone || nurseryProfile.location) && (
+                <div className="mt-4 space-y-1 text-sm text-white/90">
+                  {nurseryProfile.phone && (
+                    <p>{lang === "en" ? "Phone" : "Telefono"}: {nurseryProfile.phone}</p>
+                  )}
 
-            {(waHref || mapHref) && (
-              <div className="mt-5 flex flex-wrap gap-3">
-                {waHref && (
-                  <a
-                    href={waHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mapuche-button-primary"
-                  >
-                    {copy[lang].whatsapp}
-                  </a>
-                )}
+                  {nurseryProfile.location && (
+                    <p>{lang === "en" ? "Location" : "Ubicacion"}: {nurseryProfile.location}</p>
+                  )}
+                </div>
+              )}
 
+              <div className="mt-6 flex flex-wrap gap-3">
                 {mapHref && (
                   <a
                     href={mapHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="mapuche-button-secondary"
+                    className="mapuche-button-primary"
                   >
                     {copy[lang].directions}
                   </a>
@@ -237,7 +230,27 @@ export default async function Home({ searchParams }: HomeProps) {
                   {copy[lang].aboutButton}
                 </Link>
               </div>
-            )}
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <div className="relative overflow-hidden rounded-[1.5rem] border border-white/20 bg-white/10 shadow-[0_18px_40px_rgba(9,14,13,0.3)] ring-1 ring-white/10 md:rounded-[2rem] md:shadow-[0_28px_60px_rgba(9,14,13,0.34)]">
+              <div className="relative aspect-[4/3] sm:aspect-[16/10] lg:aspect-[4/5] lg:min-h-[34rem]">
+                <ImageCarousel
+                  images={heroImages}
+                  alt={copy[lang].profileAlt}
+                  fill
+                  priority
+                  autoPlay
+                  autoPlayIntervalMs={4200}
+                  quality={90}
+                  sizes="(max-width: 768px) 100vw, 46vw"
+                  className="object-cover"
+                />
+
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0f231d66] via-transparent to-transparent" />
+              </div>
+            </div>
           </div>
         </div>
       </section>

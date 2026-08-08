@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ImageCarouselProps = {
   images: string[];
@@ -9,6 +9,8 @@ type ImageCarouselProps = {
   priority?: boolean;
   quality?: number;
   sizes?: string;
+  autoPlay?: boolean;
+  autoPlayIntervalMs?: number;
 } & (
   | { fill: true; className?: string }
   | { natural: true; className?: string }
@@ -21,6 +23,8 @@ export default function ImageCarousel({
   priority = false,
   quality,
   sizes,
+  autoPlay = false,
+  autoPlayIntervalMs = 4500,
   ...rest
 }: ImageCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -31,6 +35,18 @@ export default function ImageCarousel({
 
   const validImages = images.length > 0 ? images : [];
   const count = validImages.length;
+
+  useEffect(() => {
+    if (!autoPlay || count <= 1) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setIndex((currentIndex) => (currentIndex + 1) % count);
+    }, autoPlayIntervalMs);
+
+    return () => window.clearInterval(interval);
+  }, [autoPlay, autoPlayIntervalMs, count]);
 
   if (count === 0) return null;
 
