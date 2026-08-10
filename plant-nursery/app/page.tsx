@@ -195,7 +195,7 @@ export default async function Home({ searchParams }: HomeProps) {
               </div>
 
               <h1 className="mt-3 text-2xl font-bold leading-tight text-[#f8f0e4] sm:mt-4 sm:text-3xl md:text-5xl">
-                {copy[lang].heroTitle}
+                {nurseryProfile.title || copy[lang].heroTitle}
               </h1>
 
               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white sm:mt-4 sm:leading-7 md:text-lg">

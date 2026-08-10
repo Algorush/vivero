@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Fraunces, Manrope } from "next/font/google";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/fraunces/400.css";
+import "@fontsource/fraunces/500.css";
+import "@fontsource/fraunces/600.css";
+import "@fontsource/fraunces/700.css";
 import "./globals.css";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { getNurseryProfile } from "@/lib/notion";
 import { CartProvider } from "@/lib/cart-context";
-import CartButton from "@/components/CartButton";
-import CartDrawer from "@/components/CartDrawer";
 import DocumentLanguageSync from "@/components/DocumentLanguageSync";
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import CartControls from "@/components/CartControls";
 
 const defaultDescription =
   "Vivero de plantas nativas y exoticas Carilemu. Descubre nuestro catalogo, precios y disponibilidad.";
@@ -51,18 +48,17 @@ export default async function RootLayout({
   const nurseryProfile = await getNurseryProfile();
 
   return (
-    <html
-      lang="es"
-      className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}
-    >
+    <html lang="es" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <CartProvider>
           <Suspense fallback={null}>
             <DocumentLanguageSync />
           </Suspense>
+          <Suspense fallback={null}>
+            <LanguageSwitcher />
+          </Suspense>
           {children}
-          <CartButton />
-          <CartDrawer whatsappPhone={nurseryProfile.phone} />
+          <CartControls whatsappPhone={nurseryProfile.phone} />
         </CartProvider>
       </body>
     </html>

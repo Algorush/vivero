@@ -13,10 +13,13 @@
     "upload:model": "node scripts/upload-model-to-r2.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "import:notion-plants": "node scripts/import-plants-from-csv.mjs"
+    "import:notion-plants": "node scripts/import-plants-from-csv.mjs",
+    "update:en-fields": "node scripts/update-en-fields-from-csv.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.787.0",
+    "@fontsource/fraunces": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
     "@neondatabase/serverless": "^1.1.0",
     "@notionhq/client": "^5.16.0",
     "drizzle-orm": "^0.45.2",

@@ -3,12 +3,14 @@ import ImageCarousel from "@/components/ImageCarousel";
 import AddToCartButton from "@/components/AddToCartButton";
 import { Plant } from "@/types/plant";
 import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
+import { getCategoryLabel } from "@/lib/ui-copy";
 
 type PlantCardProps = {
   plant: Plant;
   priority?: boolean;
   animationDelayMs?: number;
   lang?: SiteLanguage;
+  catalogSearchParams?: string;
 };
 
 export default function PlantCard({
@@ -16,10 +18,15 @@ export default function PlantCard({
   priority = false,
   animationDelayMs = 0,
   lang: rawLang = "es",
+  catalogSearchParams = "",
 }: PlantCardProps) {
   const lang = normalizeSiteLanguage(rawLang);
+  const detailHref = appendLanguageParam(
+    catalogSearchParams ? `/plants/${plant.slug}?${catalogSearchParams}` : `/plants/${plant.slug}`,
+    lang
+  );
   return (
-    <Link href={appendLanguageParam(`/plants/${plant.slug}`, lang)} className="block h-full min-w-0">
+    <Link href={detailHref} className="block h-full min-w-0">
       <div
         className="relative animate-card-in flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white text-[#1f1a17] shadow transition hover:shadow-lg motion-reduce:animate-none dark:bg-[#fffdf8] dark:text-[#1f1a17]"
         style={{ animationDelay: `${animationDelayMs}ms` }}
@@ -43,7 +50,7 @@ export default function PlantCard({
           </h2>
 
           <p className="mt-1 break-words text-xs font-medium uppercase tracking-[0.14em] text-[#7a6a59]">
-            {plant.category}
+            {getCategoryLabel(lang, plant.category)}
           </p>
 
           {plant.price > 0 && (
@@ -53,7 +60,7 @@ export default function PlantCard({
           )}
 
           <div className="mt-auto pt-3">
-            <AddToCartButton plant={plant} variant="icon" />
+            <AddToCartButton plant={plant} variant="icon" lang={lang} />
           </div>
         </div>
       </div>

@@ -27,6 +27,28 @@ function filterAvailablePlants(plants: Plant[]): Plant[] {
   return plants.filter((plant) => plant.available === true);
 }
 
+function buildCatalogSearchParams(
+  category: string,
+  query: string,
+  nativo: boolean | undefined
+): string {
+  const params = new URLSearchParams();
+
+  if (category.trim()) {
+    params.set("category", category.trim());
+  }
+
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+
+  if (nativo !== undefined) {
+    params.set("nativo", String(nativo));
+  }
+
+  return params.toString();
+}
+
 export default function PlantInfiniteGrid({
   initialPlants,
   initialNextCursor,
@@ -43,6 +65,7 @@ export default function PlantInfiniteGrid({
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const catalogSearchParams = buildCatalogSearchParams(category, query, nativo);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasUserScrolledRef = useRef(false);
@@ -212,6 +235,7 @@ export default function PlantInfiniteGrid({
               priority={index === 0}
               animationDelayMs={(index % 12) * 45}
               lang={lang}
+              catalogSearchParams={catalogSearchParams}
             />
           </div>
         ))}
@@ -225,7 +249,7 @@ export default function PlantInfiniteGrid({
 
       {isLoading && (
         <div className="mt-6 text-center text-sm text-gray-500">
-          Cargando mas plantas...
+          {lang === "en" ? "Loading more plants..." : "Cargando mas plantas..."}
         </div>
       )}
 
@@ -238,7 +262,7 @@ export default function PlantInfiniteGrid({
             disabled={isLoading}
             className="relative z-10 px-4 py-2 rounded-lg border border-green-600 text-green-700 hover:bg-green-50 transition touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Cargando..." : "Cargar mas"}
+              {isLoading ? (lang === "en" ? "Loading..." : "Cargando...") : (lang === "en" ? "Load more" : "Cargar mas")}
           </button>
 
           <div

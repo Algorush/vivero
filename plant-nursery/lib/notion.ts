@@ -50,6 +50,10 @@ type NotionPage = {
   };
 };
 
+type NotionPageRecord = {
+  properties?: Record<string, unknown>;
+};
+
 type LegacyQueryResponse = {
   results: NotionPage[];
   has_more?: boolean;
@@ -397,6 +401,17 @@ function getSectionBodyAfterHeading(blocks: NotionBlock[], headingLabel: string)
   return paragraphs.join("\n\n").trim();
 }
 
+function getSectionBodyAfterHeadings(blocks: NotionBlock[], headingLabels: string[]): string {
+  for (const headingLabel of headingLabels) {
+    const body = getSectionBodyAfterHeading(blocks, headingLabel);
+    if (body) {
+      return body;
+    }
+  }
+
+  return "";
+}
+
 // Returns a URL from supported link-like blocks.
 function getBlockUrl(block: NotionBlock): string {
   if (block.type === "embed") {
@@ -433,7 +448,7 @@ function headingToSection(heading: string): NurserySection | null {
   if (key === "telefono") return "phone";
   if (key === "text whatsapp") return "whatsappText";
   if (key === "nombre") return "ownerName";
-  if (key === "ubicacion") return "location";
+  if (key === "ubicacion" || key === "location") return "location";
   if (key === "direccion") return "mapUrl";
 
   return null;
@@ -764,12 +779,21 @@ const getNurseryProfileCached = unstable_cache(
 
     const blocks = children.results ?? [];
 
-    const firstHeading = blocks
-      .map(getHeadingText)
-      .find(Boolean);
+    const descriptionHeadings =
+      lang === "en"
+        ? ["Description", "About us"]
+        : ["Description", "Sobre nosotros"];
+
+    const whatsappHeadings =
+      lang === "en"
+        ? ["Text Whatsapp en", "Text Whatsapp"]
+        : ["Text Whatsapp", "Text Whatsapp en"];
 
     const profile: NurseryProfile = {
-      title: localizedValue(lang, firstHeading || "Sobre nuestro vivero", "About our nursery"),
+      title:
+        lang === "en"
+          ? getSectionBodyAfterHeading(blocks, "Title_en")
+          : "",
       description: "",
       image: "",
       phone: "",
@@ -827,9 +851,14 @@ const getNurseryProfileCached = unstable_cache(
     }
 
     if (!profile.description) {
-      profile.description = blocks
-        .map(getParagraphText)
-        .find(Boolean) ?? "";
+      profile.description =
+        getSectionBodyAfterHeadings(blocks, descriptionHeadings) ||
+        blocks.map(getParagraphText).find(Boolean) ||
+        "";
+    }
+
+    if (!profile.whatsappText) {
+      profile.whatsappText = getSectionBodyAfterHeadings(blocks, whatsappHeadings);
     }
 
     if (!profile.image) {
@@ -857,18 +886,32 @@ const getNurseryAboutCached = unstable_cache(
   async (lang: SiteLanguage): Promise<NurseryAbout> => {
     const pageId = normalizeNotionPageId(NURSERY_PAGE_RAW_ID);
 
+    const page = await notionLegacy.request<NotionPageRecord>({
+      path: `pages/${pageId}`,
+      method: "get",
+    });
+
     const children = await notionLegacy.request<NotionBlocksResponse>({
       path: `blocks/${pageId}/children?page_size=50`,
       method: "get",
     });
 
     const blocks = children.results ?? [];
+    const aboutHeadings =
+      lang === "en"
+        ? ["About us", "About Us"]
+        : ["Sobre nosotros", "Sobre Nosotros"];
+
+    const pageTitle = localizedValue(
+      lang,
+      getLocalizedText(page.properties ?? {}, "Title", "es", "title"),
+      getLocalizedText(page.properties ?? {}, "Title", "en", "title")
+    );
 
     return {
-      title: lang === "en" ? "About Our Nursery" : "Sobre Nuestro Vivero",
+      title: pageTitle || (lang === "en" ? "About Our Nursery" : "Sobre Nuestro Vivero"),
       body:
-        getSectionBodyAfterHeading(blocks, "Sobre Nosotros") ||
-        getSectionBodyAfterHeading(blocks, "About Us") ||
+        getSectionBodyAfterHeadings(blocks, aboutHeadings) ||
         getSectionBodyAfterHeading(blocks, "Sobre nuestro vivero") ||
         getSectionBodyAfterHeading(blocks, "About our nursery") ||
         blocks.map(getParagraphText).find(Boolean) ||

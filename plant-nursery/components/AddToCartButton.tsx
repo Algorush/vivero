@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
 import type { Plant } from "@/types/plant";
+import { getUiCopy } from "@/lib/ui-copy";
+import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type AddToCartButtonProps = {
   plant: Plant;
   className?: string;
   variant?: "text" | "icon";
+  lang?: SiteLanguage;
 };
 
 function CartPlusIcon() {
@@ -53,9 +56,12 @@ export default function AddToCartButton({
   plant,
   className,
   variant = "text",
+  lang: rawLang = "es",
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [justAdded, setJustAdded] = useState(false);
+  const lang = normalizeSiteLanguage(rawLang);
+  const copy = getUiCopy(lang);
 
   const handleClick = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -70,8 +76,8 @@ export default function AddToCartButton({
       <button
         type="button"
         onClick={handleClick}
-        aria-label="Agregar al carrito"
-        title="Agregar al carrito"
+        aria-label={copy.addToCart}
+        title={copy.addToCart}
         style={{ backgroundColor: "#fff3e3" }}
         className={
           className ??
@@ -97,7 +103,7 @@ export default function AddToCartButton({
         "mt-2 w-full rounded-xl bg-[#2f5f4f] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#254c40]"
       }
     >
-      {justAdded ? "Agregado ✓" : "Agregar al carrito"}
+      {justAdded ? (lang === "en" ? "Added ✓" : "Agregado ✓") : copy.addToCart}
     </button>
   );
 }

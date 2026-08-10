@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantInfiniteGrid from "@/components/PlantInfiniteGrid";
 import type { PlantsPageResult } from "@/lib/notion";
+import { getCategoryLabel, getUiCopy } from "@/lib/ui-copy";
 import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type PlantCatalogProps = {
@@ -76,6 +77,7 @@ export default function PlantCatalog({
   const activeCategoryRef = useRef(activeCategory);
   const activeQueryRef = useRef(activeQuery);
   const activeNativoRef = useRef(activeNativo);
+  const copy = getUiCopy(lang);
 
   // Keep refs in sync with state
   useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
@@ -261,17 +263,17 @@ export default function PlantCatalog({
                       runSearch();
                     }
                   }}
-                  placeholder="Búsqueda inteligente: plantas para sombra, poca agua y jardín nativo..."
+                  placeholder={copy.catalogSearchPlaceholder}
                   className="min-w-0 flex-1 rounded-xl border border-[#d8c0a0] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#1f1a17] placeholder:text-zinc-400 focus:border-[#2f5f4f] focus:outline-none"
-                  aria-label="Buscar plantas"
+                  aria-label={copy.catalogSearchAria}
                 />
                 <button
                   type="button"
                   onClick={runSearch}
                   disabled={isFilterLoading}
                   className="flex shrink-0 items-center justify-center rounded-xl border border-[#d8c0a0] bg-[#f6ebda] px-3 py-1.5 text-sm text-[#1f1a17] transition hover:bg-[#ebdbc1] disabled:cursor-wait disabled:opacity-70"
-                  aria-label="Buscar plantas"
-                  title="Buscar"
+                  aria-label={copy.catalogSearchAria}
+                  title={copy.catalogSearchButton}
                 >
                   <span aria-hidden="true">🔍</span>
                 </button>
@@ -293,7 +295,7 @@ export default function PlantCatalog({
               } disabled:cursor-wait disabled:opacity-70`}
               aria-pressed={activeNativo === true}
             >
-              🌿 Nativas
+              {copy.nativas}
             </button>
             <button
               type="button"
@@ -304,7 +306,7 @@ export default function PlantCatalog({
               } disabled:cursor-wait disabled:opacity-70`}
               aria-pressed={activeNativo === false}
             >
-              🌺 Exóticas
+              {copy.exoticas}
             </button>
             {/* divider */}
             <span className="mx-0.5 self-center text-[#d8c0a0]">|</span>
@@ -318,11 +320,12 @@ export default function PlantCatalog({
               } disabled:cursor-wait disabled:opacity-70`}
               aria-pressed={!activeCategory}
             >
-              Todas
+              {copy.allCategories}
             </button>
 
               {categories.map((category) => {
                 const isActive = normalize(activeCategory) === normalize(category);
+                const categoryLabel = getCategoryLabel(lang, category);
 
                 return (
                   <button
@@ -336,7 +339,7 @@ export default function PlantCatalog({
                     } disabled:cursor-wait disabled:opacity-70`}
                     aria-pressed={isActive}
                   >
-                    {category}
+                    {categoryLabel}
                   </button>
                 );
               })}
@@ -350,7 +353,9 @@ export default function PlantCatalog({
       )}
 
       {isFilterLoading && (
-        <div className="mb-4 text-sm text-zinc-500">Filtrando plantas...</div>
+        <div className="mb-4 text-sm text-zinc-500">
+          {lang === "en" ? "Filtering plants..." : "Filtrando plantas..."}
+        </div>
       )}
 
       <div className="relative">

@@ -2,16 +2,20 @@
 
 import { useCart } from "@/lib/cart-context";
 import type { CartItem } from "@/types/cart";
+import { getUiCopy } from "@/lib/ui-copy";
+import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
 type CartDrawerProps = {
   whatsappPhone: string;
+  lang?: SiteLanguage;
 };
 
 function sanitizePhoneToWa(value: string): string {
   return value.replace(/[^\d]/g, "");
 }
 
-function buildOrderMessage(items: CartItem[]): string {
+function buildOrderMessage(items: CartItem[], lang: SiteLanguage): string {
+  const copy = getUiCopy(lang);
   const lines = items.map(
     (item, index) =>
       `${index + 1}. ${item.name} x${item.quantity}${
@@ -21,31 +25,33 @@ function buildOrderMessage(items: CartItem[]): string {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return [
-    "Hola! Me interesan estas plantas:",
+    lang === "en" ? "Hi! I am interested in these plants:" : "Hola! Me interesan estas plantas:",
     "",
     ...lines,
     "",
-    total > 0 ? `Total: $${total}` : "",
+    total > 0 ? `${copy.cartTotal}: $${total}` : "",
   ]
     .filter((line) => line !== "")
     .join("\n");
 }
 
-export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
+export default function CartDrawer({ whatsappPhone, lang: rawLang = "es" }: CartDrawerProps) {
   const { items, isOpen, closeCart, removeItem, updateQuantity, clear } =
     useCart();
+  const lang = normalizeSiteLanguage(rawLang);
+  const copy = getUiCopy(lang);
 
   if (!isOpen) {
     return null;
   }
 
-  const message = buildOrderMessage(items);
+  const message = buildOrderMessage(items, lang);
   const waPhone = sanitizePhoneToWa(whatsappPhone);
   const waHref = waPhone
     ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`
     : "";
   const mailHref = `mailto:?subject=${encodeURIComponent(
-    "Consulta de plantas - Vivero"
+    lang === "en" ? "Plant inquiry - Nursery" : "Consulta de plantas - Vivero"
   )}&body=${encodeURIComponent(message)}`;
 
   return (
@@ -58,11 +64,11 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#1f1a17]">Tu carrito</h2>
+          <h2 className="text-lg font-semibold text-[#1f1a17]">{copy.cartTitle}</h2>
           <button
             type="button"
             onClick={closeCart}
-            aria-label="Cerrar carrito"
+            aria-label={copy.cartClose}
             className="text-2xl leading-none text-zinc-500"
           >
             &times;
@@ -70,9 +76,7 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
         </div>
 
         {items.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            Todavia no agregaste plantas.
-          </p>
+          <p className="text-sm text-zinc-500">{copy.cartEmpty}</p>
         ) : (
           <>
             <div className="flex-1 space-y-3 overflow-y-auto">
@@ -95,7 +99,7 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
                     </p>
                     {item.price > 0 && (
                       <p className="text-xs text-zinc-500">
-                        ${item.price} c/u
+                        ${item.price} {copy.cartUnit}
                       </p>
                     )}
                     <div className="mt-1 flex items-center gap-2">
@@ -105,7 +109,7 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
                           updateQuantity(item.slug, item.quantity - 1)
                         }
                         className="h-6 w-6 rounded-full border border-[#d8c0a0] text-sm"
-                        aria-label="Restar cantidad"
+                        aria-label={copy.cartDecrease}
                       >
                         -
                       </button>
@@ -116,7 +120,7 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
                           updateQuantity(item.slug, item.quantity + 1)
                         }
                         className="h-6 w-6 rounded-full border border-[#d8c0a0] text-sm"
-                        aria-label="Sumar cantidad"
+                        aria-label={copy.cartIncrease}
                       >
                         +
                       </button>
@@ -125,10 +129,10 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
                   <button
                     type="button"
                     onClick={() => removeItem(item.slug)}
-                    aria-label="Quitar del carrito"
+                    aria-label={copy.cartRemove}
                     className="text-sm text-red-600"
                   >
-                    Quitar
+                    {copy.cartRemove}
                   </button>
                 </div>
               ))}
@@ -142,21 +146,21 @@ export default function CartDrawer({ whatsappPhone }: CartDrawerProps) {
                   rel="noreferrer"
                   className="block w-full rounded-xl bg-[#25D366] px-3 py-2 text-center text-sm font-semibold text-white"
                 >
-                  Enviar por WhatsApp
+                  {copy.cartSendWhatsapp}
                 </a>
               )}
               <a
                 href={mailHref}
                 className="block w-full rounded-xl bg-[#2f5f4f] px-3 py-2 text-center text-sm font-semibold text-white"
               >
-                Enviar por Email
+                {copy.cartSendEmail}
               </a>
               <button
                 type="button"
                 onClick={clear}
                 className="block w-full rounded-xl border border-[#d8c0a0] px-3 py-2 text-center text-sm text-zinc-600"
               >
-                Vaciar carrito
+                {copy.cartClear}
               </button>
             </div>
           </>

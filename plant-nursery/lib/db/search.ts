@@ -53,21 +53,30 @@ type SearchResult = {
 function rowToPlant(row: Record<string, unknown>, lang: SiteLanguage): Plant {
   const images = Array.isArray(row.images) ? (row.images as string[]) : [];
   const suffix = lang === "en" ? "_en" : "";
+  const localizedText = (key: string): string => {
+    const localized = String(row[`${key}${suffix}`] ?? "").trim();
+    if (localized) {
+      return localized;
+    }
+
+    return String(row[key] ?? "").trim();
+  };
+
   return {
     id: row.id as string,
     slug: row.slug as string,
-    name: (row[`name${suffix}`] ?? row.name) as string,
-    description: (row[`description${suffix}`] ?? row.description) as string,
-    flor: (row[`flor${suffix}`] ?? row.flor) as string,
-    riego: (row[`riego${suffix}`] ?? row.riego) as string,
-    suelo: (row[`suelo${suffix}`] ?? row.suelo) as string,
-    florece: (row[`florece${suffix}`] ?? row.florece) as string,
-    exposicion: (row[`exposicion${suffix}`] ?? row.exposicion) as string,
-    fruta: (row[`fruta${suffix}`] ?? row.fruta) as string,
-    tamano: (row[`tamano${suffix}`] ?? row.tamano) as string,
-    utilizacion: (row[`utilizacion${suffix}`] ?? row.utilizacion) as string,
-    propagacion: (row[`propagacion${suffix}`] ?? row.propagacion) as string,
-    medicinal: (row[`medicinal${suffix}`] ?? row.medicinal) as string,
+    name: localizedText("name"),
+    description: localizedText("description"),
+    flor: localizedText("flor"),
+    riego: localizedText("riego"),
+    suelo: localizedText("suelo"),
+    florece: localizedText("florece"),
+    exposicion: localizedText("exposicion"),
+    fruta: localizedText("fruta"),
+    tamano: localizedText("tamano"),
+    utilizacion: localizedText("utilizacion"),
+    propagacion: localizedText("propagacion"),
+    medicinal: localizedText("medicinal"),
     category: row.category as string,
     nativo: row.nativo as boolean,
     price: row.price as number,
