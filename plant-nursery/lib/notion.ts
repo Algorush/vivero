@@ -73,6 +73,18 @@ type NotionRichTextItem = {
   plain_text?: string;
 };
 
+type NotionPropertyValue = {
+  title?: NotionRichTextItem[];
+  rich_text?: NotionRichTextItem[];
+  select?: { name?: string } | null;
+  checkbox?: boolean;
+  number?: number | null;
+  files?: Array<{
+    file?: { url?: string };
+    external?: { url?: string };
+  }>;
+};
+
 type NotionBlock = {
   type?: string;
   paragraph?: { rich_text?: NotionRichTextItem[] };
@@ -220,6 +232,26 @@ function richTextToPlain(items?: NotionRichTextItem[]): string {
   return (items ?? []).map((item) => item.plain_text ?? "").join("").trim();
 }
 
+function normalizeNotionFieldName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getNotionProperty(properties: Record<string, unknown>, fieldName: string): NotionPropertyValue | undefined {
+  const target = normalizeNotionFieldName(fieldName);
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (normalizeNotionFieldName(key) === target) {
+      return value as NotionPropertyValue;
+    }
+  }
+
+  return undefined;
+}
+
 function getLocalizedText(
   properties: Record<string, unknown>,
   baseName: string,
@@ -242,9 +274,7 @@ function getLocalizedText(
         ];
 
   for (const key of candidates) {
-    const property = properties[key] as
-      | { title?: NotionRichTextItem[]; rich_text?: NotionRichTextItem[] }
-      | undefined;
+      const property = getNotionProperty(properties, key);
 
     if (!property) {
       continue;
@@ -296,8 +326,8 @@ function normalizeUrlForStableHash(value: string): string {
 }
 
 function getPlantImageBaseName(page: NotionPage): string {
-  const slug = textArrayToPlain(page.properties.Slug?.rich_text);
-  const title = textArrayToPlain(page.properties.Title?.title);
+  const slug = textArrayToPlain(getNotionProperty(page.properties as Record<string, unknown>, "Slug")?.rich_text);
+  const title = textArrayToPlain(getNotionProperty(page.properties as Record<string, unknown>, "Title")?.title);
   const preferredName = slugifyFileName(slug || title);
 
   if (preferredName) {
@@ -444,6 +474,7 @@ function headingToSection(heading: string): NurserySection | null {
   const key = normalizeHeading(heading);
 
   if (key === "description") return "description";
+  if (key === "descripcion") return "description";
   if (key === "photo principal") return "image";
   if (key === "telefono") return "phone";
   if (key === "text whatsapp") return "whatsappText";
@@ -498,7 +529,7 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}, lang: SiteLanguage 
       getLocalizedText(properties, "Title", "es", "title"),
       getLocalizedText(properties, "Title", "en", "title")
     ),
-    slug: textArrayToPlain(page.properties.Slug?.rich_text),
+    slug: textArrayToPlain(getNotionProperty(properties, "Slug")?.rich_text),
     description: localizedValue(
       lang,
       getLocalizedText(properties, "Description", "es"),
@@ -514,11 +545,11 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}, lang: SiteLanguage 
     utilizacion: localizedValue(lang, getLocalizedText(properties, "Utilizacion", "es"), getLocalizedText(properties, "Utilizacion", "en")),
     propagacion: localizedValue(lang, getLocalizedText(properties, "Propagacion", "es"), getLocalizedText(properties, "Propagacion", "en")),
     medicinal: localizedValue(lang, getLocalizedText(properties, "Medicinal", "es"), getLocalizedText(properties, "Medicinal", "en")),
-    category: page.properties.Category?.select?.name || "",
-    nativo: page.properties.Nativo?.checkbox ?? false,
-    price: page.properties.Price?.number || 0,
-    amount: page.properties.Amount?.number || 0,
-    available: page.properties.Available?.checkbox || false,
+    category: getNotionProperty(properties, "Category")?.select?.name || "",
+    nativo: getNotionProperty(properties, "Nativo")?.checkbox ?? false,
+    price: getNotionProperty(properties, "Price")?.number || 0,
+    amount: getNotionProperty(properties, "Amount")?.number || 0,
+    available: getNotionProperty(properties, "Available")?.checkbox || false,
     image: allImages[0] ?? "",
     images: allImages,
   };
@@ -782,12 +813,17 @@ const getNurseryProfileCached = unstable_cache(
     const descriptionHeadings =
       lang === "en"
         ? ["Description", "About us"]
-        : ["Description", "Sobre nosotros"];
+        : ["Descripcion", "Description", "Sobre nosotros"];
 
     const whatsappHeadings =
       lang === "en"
         ? ["Text Whatsapp en", "Text Whatsapp"]
         : ["Text Whatsapp", "Text Whatsapp en"];
+
+    const locationHeadings =
+      lang === "en"
+        ? ["Location", "Ubicacion"]
+        : ["Ubicacion", "Location"];
 
     const profile: NurseryProfile = {
       title:
@@ -835,16 +871,12 @@ const getNurseryProfileCached = unstable_cache(
         continue;
       }
 
-      if (currentSection === "description" && !profile.description) {
-        profile.description = paragraphText;
-      } else if (currentSection === "phone" && !profile.phone) {
+      if (currentSection === "phone" && !profile.phone) {
         profile.phone = paragraphText;
       } else if (currentSection === "whatsappText" && !profile.whatsappText) {
         profile.whatsappText = paragraphText;
       } else if (currentSection === "ownerName" && !profile.ownerName) {
         profile.ownerName = paragraphText;
-      } else if (currentSection === "location" && !profile.location) {
-        profile.location = paragraphText;
       } else if (currentSection === "mapUrl" && !profile.mapUrl) {
         profile.mapUrl = paragraphText;
       }
@@ -859,6 +891,10 @@ const getNurseryProfileCached = unstable_cache(
 
     if (!profile.whatsappText) {
       profile.whatsappText = getSectionBodyAfterHeadings(blocks, whatsappHeadings);
+    }
+
+    if (!profile.location) {
+      profile.location = getSectionBodyAfterHeadings(blocks, locationHeadings);
     }
 
     if (!profile.image) {

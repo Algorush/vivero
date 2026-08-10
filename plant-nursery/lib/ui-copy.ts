@@ -45,7 +45,7 @@ export const uiCopy = {
       "Búsqueda inteligente: plantas para sombra, poca agua y jardín nativo...",
     nativas: "🌿 Nativas",
     exoticas: "🌺 Exóticas",
-    allCategories: "Todas las categorias",
+    allCategories: "Todas",
     aboutTitle: "Sobre el vivero",
     aboutBodyFallback: "No hay contenido disponible en la sección Sobre Nosotros de Notion.",
     aboutButton: "Ver catálogo",
