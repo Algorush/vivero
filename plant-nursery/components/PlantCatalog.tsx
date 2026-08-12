@@ -239,6 +239,14 @@ export default function PlantCatalog({
         ? "Fillke Anumka"
         : "";
 
+  const handleSearchInputChange = (value: string) => {
+    setSearchInput(value);
+
+    if (value.trim() === "") {
+      void applyFilters(activeCategoryRef.current, "", activeNativoRef.current);
+    }
+  };
+
   return (
     <>
       <div className="sticky top-2 z-20 mb-6">
@@ -256,7 +264,7 @@ export default function PlantCatalog({
                 <input
                   type="search"
                   value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
+                  onChange={(event) => handleSearchInputChange(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();

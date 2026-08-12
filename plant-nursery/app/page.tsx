@@ -41,8 +41,8 @@ const copy: Record<SiteLanguage, {
   languageLabelShort: string;
 }> = {
   es: {
-    title: "Vivero Karu-lemu | Plantas nativas y exoticas en catalogo online",
-    description: "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu: precios, disponibilidad y caracteristicas de cada especie.",
+    title: "Vivero Karu-lemu en Villarrica | Plantas nativas y exoticas en catalogo online",
+    description: "Explora el catalogo de plantas nativas y exoticas del Vivero Karu-lemu en Villarrica: precios, disponibilidad y caracteristicas de cada especie.",
     heroTitle: "Vivero \"karū-lemu\" - plantas nativas y exóticas",
     heroDescription: "Explora el catalogo y descubre plantas nativas y exoticas para tu espacio.",
     aboutButton: "Sobre Nuestro Vivero",
@@ -54,8 +54,8 @@ const copy: Record<SiteLanguage, {
     languageLabelShort: "EN",
   },
   en: {
-    title: "Vivero Karu-lemu | Native and exotic plants online catalog",
-    description: "Browse the Vivero Karu-lemu catalog of native and exotic plants: prices, availability, and details for each species.",
+    title: "Vivero Karu-lemu in Villarrica | Native and exotic plants online catalog",
+    description: "Browse the Vivero Karu-lemu catalog in Villarrica of native and exotic plants: prices, availability, and details for each species.",
     heroTitle: "Vivero \"karū-lemu\" - native and exotic plants",
     heroDescription: "Browse the catalog and discover native and exotic plants for your space.",
     aboutButton: "About Our Nursery",
@@ -75,30 +75,36 @@ export async function generateMetadata(
   const lang = normalizeSiteLanguage(params.lang);
   const title = copy[lang].title;
   const description = copy[lang].description;
+  const canonicalUrl = appendLanguageParam(SITE_URL, lang);
+  const alternateUrls = {
+    es: appendLanguageParam(SITE_URL, "es"),
+    en: appendLanguageParam(SITE_URL, "en"),
+  };
 
-  if (hasSearchParams(params)) {
-    return {
-      title,
-      description,
-      alternates: { canonical: SITE_URL },
-      openGraph: {
-        title,
-        description,
-        url: SITE_URL,
-      },
-    };
-  }
+  const keywords =
+    lang === "en"
+      ? ["Vivero Karu-lemu", "native plants", "exotic plants", "nursery", "Villarrica"]
+      : ["Vivero Karu-lemu", "plantas nativas", "plantas exoticas", "vivero", "Villarrica"];
+
+  const robots = hasSearchParams(params) ? { index: false, follow: true } : undefined;
 
   const nurseryProfile = await getNurseryProfile(lang);
 
   return {
     title,
     description,
-    alternates: { canonical: SITE_URL },
+    keywords,
+    robots,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: alternateUrls,
+    },
     openGraph: {
       title,
       description,
-      url: SITE_URL,
+      url: canonicalUrl,
+      locale: lang === "en" ? "en_US" : "es_ES",
+      alternateLocale: [lang === "en" ? "es_ES" : "en_US"],
       images: nurseryProfile.image ? [{ url: nurseryProfile.image }] : undefined,
     },
   };

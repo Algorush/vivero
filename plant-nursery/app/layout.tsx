@@ -29,7 +29,6 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    locale: "es_ES",
     title: `${SITE_NAME} | Plantas nativas y exoticas`,
     description: defaultDescription,
   },

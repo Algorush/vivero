@@ -49,16 +49,31 @@ export async function generateMetadata({
       : `Conoce ${plant.name} en nuestro vivero: caracteristicas, cuidados y disponibilidad.`;
   const image = plant.images?.[0] || plant.image;
   const url = `${SITE_URL}/plants/${plant.slug}`;
+  const canonicalUrl = appendLanguageParam(url, lang);
+  const alternateUrls = {
+    es: appendLanguageParam(url, "es"),
+    en: appendLanguageParam(url, "en"),
+  };
+  const keywords =
+    lang === "en"
+      ? [plant.name, plant.category || "", "native plant", "exotic plant", "nursery"]
+      : [plant.name, plant.category || "", "planta nativa", "planta exotica", "vivero"];
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    keywords: keywords.filter((value): value is string => Boolean(value)),
+    alternates: {
+      canonical: canonicalUrl,
+      languages: alternateUrls,
+    },
     openGraph: {
       title,
       description,
-      url,
+      url: canonicalUrl,
       type: "website",
+      locale: lang === "en" ? "en_US" : "es_ES",
+      alternateLocale: [lang === "en" ? "es_ES" : "en_US"],
       images: image ? [{ url: image, alt: plant.name }] : undefined,
     },
     twitter: {
