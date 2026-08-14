@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
@@ -21,8 +21,8 @@ function ViewModeIcon({ mode }: { mode: CatalogViewMode }) {
 
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="4" width="16" height="16" rx="2.5" />
-      <path d="M4 12h16" />
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M3 12h18" />
     </svg>
   );
 }
@@ -45,19 +45,41 @@ function buildHref(pathname: string, searchParams: URLSearchParams, view: Catalo
 export default function FloatingViewSwitcher() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [currentView, setCurrentView] = useState<CatalogViewMode>(
+    searchParams.get("view") === "compact" ? "compact" : "large"
+  );
+
+  const currentLang = normalizeSiteLanguage(searchParams.get("lang"));
+  const currentParams = new URLSearchParams(searchParams.toString());
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const nextView: CatalogViewMode =
+        new URLSearchParams(window.location.search).get("view") === "compact" ? "compact" : "large";
+
+      setCurrentView(nextView);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const setView = (view: CatalogViewMode) => {
+    const href = buildHref(pathname, currentParams, view, currentLang);
+    window.history.replaceState(window.history.state, "", href);
+    setCurrentView(view);
+    window.dispatchEvent(new CustomEvent("catalog-view-change", { detail: { view } }));
+  };
 
   if (pathname !== "/") {
     return null;
   }
 
-  const currentLang = normalizeSiteLanguage(searchParams.get("lang"));
-  const currentView: CatalogViewMode = searchParams.get("view") === "compact" ? "compact" : "large";
-  const currentParams = new URLSearchParams(searchParams.toString());
-
   return (
     <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full border border-white/20 bg-[#1f1a17]/70 p-1 text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md">
-      <Link
-        href={buildHref(pathname, currentParams, "large", currentLang)}
+      <button
+        type="button"
+        onClick={() => setView("large")}
         className={[
           "rounded-full px-3 py-2 transition",
           currentView === "large" ? "bg-white text-[#1f1a17]" : "text-white/80 hover:text-white",
@@ -66,9 +88,10 @@ export default function FloatingViewSwitcher() {
         title="Tarjetas grandes"
       >
         <ViewModeIcon mode="large" />
-      </Link>
-      <Link
-        href={buildHref(pathname, currentParams, "compact", currentLang)}
+      </button>
+      <button
+        type="button"
+        onClick={() => setView("compact")}
         className={[
           "rounded-full px-3 py-2 transition",
           currentView === "compact" ? "bg-white text-[#1f1a17]" : "text-white/80 hover:text-white",
@@ -77,7 +100,7 @@ export default function FloatingViewSwitcher() {
         title="Tarjetas pequeñas"
       >
         <ViewModeIcon mode="compact" />
-      </Link>
+      </button>
     </div>
   );
 }

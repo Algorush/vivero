@@ -207,15 +207,30 @@ export default function PlantCatalog({
     }
   }, [lang]);
 
+  useEffect(() => {
+    const handleViewChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ view?: CatalogViewMode }>;
+      const nextView = customEvent.detail?.view;
+
+      if (nextView === "large" || nextView === "compact") {
+        setViewMode(nextView);
+      }
+    };
+
+    window.addEventListener("catalog-view-change", handleViewChange as EventListener);
+    return () => window.removeEventListener("catalog-view-change", handleViewChange as EventListener);
+  }, []);
+
   // Restore state from URL on back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
-      const { category: urlCategory, query: urlQuery, nativo: urlNativo } = readFiltersFromUrl();
+      const { category: urlCategory, query: urlQuery, nativo: urlNativo, view: urlView } = readFiltersFromUrl();
 
       setSearchInput(urlQuery);
       setActiveQuery(urlQuery);
       setActiveCategory(urlCategory);
       setActiveNativo(urlNativo);
+      setViewMode(urlView);
 
       void applyFilters(urlCategory, urlQuery, urlNativo, false);
     };
