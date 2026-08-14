@@ -12,9 +12,12 @@ type PlantCatalogProps = {
   initialCategory: string;
   initialQuery: string;
   initialNativo?: boolean;
+  initialView?: CatalogViewMode;
   initialPage: PlantsPageResult;
   lang?: SiteLanguage;
 };
+
+type CatalogViewMode = "large" | "compact";
 
 type PlantsApiResponse = PlantsPageResult | { error?: string };
 
@@ -33,6 +36,7 @@ function createFilterUrl(
   category?: string,
   searchQuery?: string,
   nativo?: boolean,
+  view?: CatalogViewMode,
   lang: SiteLanguage = "es"
 ): string {
   const params = new URLSearchParams();
@@ -49,6 +53,10 @@ function createFilterUrl(
     params.set("nativo", String(nativo));
   }
 
+  if (view && view !== "large") {
+    params.set("view", view);
+  }
+
   params.set("lang", lang);
 
   const queryString = params.toString();
@@ -60,6 +68,7 @@ export default function PlantCatalog({
   initialCategory,
   initialQuery,
   initialNativo,
+  initialView = "large",
   initialPage,
   lang: rawLang = "es",
 }: PlantCatalogProps) {
@@ -68,21 +77,27 @@ export default function PlantCatalog({
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
   const [activeNativo, setActiveNativo] = useState<boolean | undefined>(initialNativo);
+  const [viewMode, setViewMode] = useState<CatalogViewMode>(initialView);
   const [page, setPage] = useState(initialPage);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState("");
   const requestIdRef = useRef(0);
   const lastFilterTouchAtRef = useRef(0);
+  const filterTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const filterDragRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeCategoryRef = useRef(activeCategory);
   const activeQueryRef = useRef(activeQuery);
   const activeNativoRef = useRef(activeNativo);
+  const viewModeRef = useRef(viewMode);
   const copy = getUiCopy(lang);
 
   // Keep refs in sync with state
   useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
   useEffect(() => { activeQueryRef.current = activeQuery; }, [activeQuery]);
   useEffect(() => { activeNativoRef.current = activeNativo; }, [activeNativo]);
+  useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
+  useEffect(() => { setViewMode(initialView); }, [initialView]);
 
   const readFiltersFromUrl = useCallback(() => {
     const currentUrl = new URL(window.location.href);
@@ -90,11 +105,14 @@ export default function PlantCatalog({
     const urlCategory = currentUrl.searchParams.get("category") ?? "";
     const urlNativoRaw = currentUrl.searchParams.get("nativo");
     const urlNativo = urlNativoRaw === "true" ? true : urlNativoRaw === "false" ? false : undefined;
+    const urlView = currentUrl.searchParams.get("view");
+    const urlViewMode: CatalogViewMode = urlView === "compact" ? urlView : "large";
 
     return {
       category: urlCategory,
       query: urlQuery,
       nativo: urlNativo,
+      view: urlViewMode,
     };
   }, []);
 
@@ -165,7 +183,7 @@ export default function PlantCatalog({
         window.history.replaceState(
           window.history.state,
           "",
-            createFilterUrl(nextCategory, nextQuery, nextNativo, lang)
+            createFilterUrl(nextCategory, nextQuery, nextNativo, viewModeRef.current, lang)
         );
       }
     } catch (error) {
@@ -211,16 +229,55 @@ export default function PlantCatalog({
   };
 
   const handleFilterTouchEnd = (action: () => void) => {
+    if (filterDragRef.current) {
+      return;
+    }
+
     lastFilterTouchAtRef.current = Date.now();
     runFilterAction(action);
   };
 
   const handleFilterClick = (action: () => void) => {
-    if (Date.now() - lastFilterTouchAtRef.current < 450) {
+    if (filterDragRef.current || Date.now() - lastFilterTouchAtRef.current < 450) {
       return;
     }
 
     runFilterAction(action);
+  };
+
+  const handleFilterTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    filterTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    filterDragRef.current = false;
+  };
+
+  const handleFilterTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = filterTouchStartRef.current;
+    const touch = event.touches[0];
+
+    if (!start || !touch) {
+      return;
+    }
+
+    const deltaX = Math.abs(touch.clientX - start.x);
+    const deltaY = Math.abs(touch.clientY - start.y);
+
+    if (deltaX > 8 && deltaX > deltaY) {
+      filterDragRef.current = true;
+    }
+  };
+
+  const handleFilterTouchCancel = () => {
+    filterTouchStartRef.current = null;
+    filterDragRef.current = false;
+  };
+
+  const handleFilterTouchEndCapture = () => {
+    filterTouchStartRef.current = null;
   };
 
   const toggleNativo = (value: boolean | undefined) => {
@@ -232,13 +289,6 @@ export default function PlantCatalog({
     void applyFilters(activeCategory, searchInput, activeNativo);
   };
 
-  const catalogLabel =
-    activeNativo === true
-      ? "Fillke Aliwentu"
-      : activeNativo === false
-        ? "Fillke Anumka"
-        : "";
-
   const handleSearchInputChange = (value: string) => {
     setSearchInput(value);
 
@@ -247,18 +297,27 @@ export default function PlantCatalog({
     }
   };
 
+  const catalogLabel =
+    activeNativo === true
+      ? "Fillke Aliwentu"
+      : activeNativo === false
+        ? "Fillke Anumka"
+        : "";
+
   return (
     <>
+      {catalogLabel ? (
+        <div className="mb-4 px-1 sm:mb-5">
+          <h2 className="font-heading text-xl font-bold leading-tight text-[#1f1a17] sm:text-2xl md:text-3xl">
+            {catalogLabel}
+          </h2>
+        </div>
+      ) : null}
+
       <div className="sticky top-2 z-20 mb-6">
         <div className="mapuche-paper-surface -mx-2 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-[#fff9f0]/85 md:mx-0 md:border-0 md:bg-transparent md:px-4 md:shadow-none md:backdrop-blur-0">
-
           {/* Row 1: title + search */}
           <div className="mb-1 flex items-center gap-2">
-            <h2 className="shrink-0 text-base font-semibold text-[#1f1a17] md:text-lg">
-              {catalogLabel ? (
-                <span className="ml-1.5 font-medium text-[#8b4f35]">{catalogLabel}</span>
-              ) : null}
-            </h2>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex min-w-0 items-center gap-2">
                 <input
@@ -293,30 +352,54 @@ export default function PlantCatalog({
           <div 
             className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
             style={{ paddingTop: "2px" }}
+            onTouchStart={handleFilterTouchStart}
+            onTouchMove={handleFilterTouchMove}
+            onTouchEndCapture={handleFilterTouchEndCapture}
+            onTouchCancel={handleFilterTouchCancel}
           >
-            <button
-              type="button"
-              onClick={() => toggleNativo(true)}
-              disabled={isFilterLoading}
-              className={`mapuche-chip shrink-0 ${
-                activeNativo === true ? "mapuche-chip-active" : "mapuche-chip-idle"
-              } disabled:cursor-wait disabled:opacity-70`}
-              aria-pressed={activeNativo === true}
-            >
-              {copy.nativas}
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleNativo(false)}
-              disabled={isFilterLoading}
-              className={`mapuche-chip shrink-0 ${
-                activeNativo === false ? "mapuche-chip-active" : "mapuche-chip-idle"
-              } disabled:cursor-wait disabled:opacity-70`}
-              aria-pressed={activeNativo === false}
-            >
-              {copy.exoticas}
-            </button>
-            {/* divider */}
+            <div className="inline-flex shrink-0 overflow-hidden rounded-full border border-[#d8c0a0] bg-[#fffdf8] shadow-sm">
+              <button
+                type="button"
+                onClick={() => toggleNativo(true)}
+                disabled={isFilterLoading}
+                className={`px-3 py-1.5 text-xs font-semibold transition sm:px-3.5 ${
+                  activeNativo === true
+                    ? "bg-[#2f5f4f] text-white"
+                    : "text-[#1f1a17] hover:bg-[#f3eadb]"
+                } disabled:cursor-wait disabled:opacity-70`}
+                aria-pressed={activeNativo === true}
+              >
+                {copy.nativas}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleNativo(false)}
+                disabled={isFilterLoading}
+                className={`border-l border-[#d8c0a0] px-3 py-1.5 text-xs font-semibold transition sm:px-3.5 ${
+                  activeNativo === false
+                    ? "bg-[#2f5f4f] text-white"
+                    : "text-[#1f1a17] hover:bg-[#f3eadb]"
+                } disabled:cursor-wait disabled:opacity-70`}
+                aria-pressed={activeNativo === false}
+              >
+                {copy.exoticas}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterClick(() => { void applyFilters(activeCategory, searchInput, undefined); })}
+                onTouchEnd={() => handleFilterTouchEnd(() => { void applyFilters(activeCategory, searchInput, undefined); })}
+                disabled={isFilterLoading}
+                className={`border-l border-[#d8c0a0] px-3 py-1.5 text-xs font-semibold transition sm:px-3.5 ${
+                  activeNativo === undefined
+                    ? "bg-[#2f5f4f] text-white"
+                    : "text-[#1f1a17] hover:bg-[#f3eadb]"
+                } disabled:cursor-wait disabled:opacity-70`}
+                aria-pressed={activeNativo === undefined}
+              >
+                {copy.allPlants}
+              </button>
+            </div>
+
             <span className="mx-0.5 self-center text-[#d8c0a0]">|</span>
             <button
               type="button"
@@ -368,13 +451,14 @@ export default function PlantCatalog({
 
       <div className="relative">
         <PlantInfiniteGrid
-          key={`${activeCategory || "all"}:${activeQuery}:${String(activeNativo)}:${lang}`}
+          key={`${activeCategory || "all"}:${activeQuery}:${String(activeNativo)}:${viewMode}:${lang}`}
           initialPlants={page.plants}
           initialNextCursor={page.nextCursor}
           initialHasMore={page.hasMore}
           category={activeCategory}
           query={activeQuery}
           nativo={activeNativo}
+          viewMode={viewMode}
           lang={lang}
           disableAutoLoad={Boolean(activeQuery.trim())}
         />

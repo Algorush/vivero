@@ -5,6 +5,7 @@ import { getNurseryProfile, getPlantCategories, getPlantsPage } from "../lib/not
 import PlantCatalog from "@/components/PlantCatalog";
 import ImageCarousel from "@/components/ImageCarousel";
 import FloatingWhatsAppButton from "@/components/FloatingWhatsAppButton";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 
@@ -15,6 +16,7 @@ type PageSearchParams = {
   cursor?: string;
   q?: string;
   nativo?: string;
+  view?: string;
   lang?: string;
 };
 
@@ -134,13 +136,14 @@ function buildHeroImages(primaryImage?: string): string[] {
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
-  const { category, cursor, q, nativo } = params;
+  const { category, cursor, q, nativo, view } = params;
   const lang = normalizeSiteLanguage(params.lang);
 
   const activeCategory = category?.trim() || "";
   const activeCursor = cursor?.trim() || "";
   const activeQuery = q?.trim() || "";
   const activeNativo = nativo === "true" ? true : nativo === "false" ? false : undefined;
+  const initialView = view === "compact" ? view : "large";
 
   const [categories, plantsPage, nurseryProfile] = await Promise.all([
     getPlantCategories(),
@@ -196,8 +199,12 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 md:gap-8 md:px-8 md:py-8 lg:grid-cols-[1.02fr_0.98fr] lg:px-10 lg:py-10 lg:min-h-[88svh] lg:items-center">
           <div className="order-2 lg:order-1">
             <div className="mapuche-hero-overlay relative overflow-hidden rounded-2xl p-4 backdrop-blur-sm sm:rounded-[2rem] sm:p-6 md:p-8">
-              <div className="inline-flex rounded-full border border-[#f2dcc0]/45 bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[#f8f0e4] sm:px-3 sm:text-xs sm:tracking-[0.18em]">
-                {lang === "en" ? "Native plants · living catalog" : "Plantas nativas · catalogo vivo"}
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="inline-flex rounded-full border border-[#f2dcc0]/45 bg-white/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[#f8f0e4] sm:px-3 sm:text-xs sm:tracking-[0.18em]">
+                  {lang === "en" ? "Native plants · living catalog" : "Plantas nativas · catalogo vivo"}
+                </div>
+
+                <LanguageSwitcher variant="inline" />
               </div>
 
               <h1 className="mt-3 text-2xl font-bold leading-tight text-[#f8f0e4] sm:mt-4 sm:text-3xl md:text-5xl">
@@ -291,6 +298,7 @@ export default async function Home({ searchParams }: HomeProps) {
           initialCategory={activeCategory}
           initialQuery={activeQuery}
           initialNativo={activeNativo}
+          initialView={initialView}
           initialPage={plantsPage}
           lang={lang}
         />

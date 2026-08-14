@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantCard from "@/components/PlantCard";
@@ -13,6 +14,7 @@ type PlantInfiniteGridProps = {
   category: string;
   query: string;
   nativo?: boolean;
+  viewMode?: "large" | "compact";
   disableAutoLoad?: boolean;
   lang?: SiteLanguage;
 };
@@ -30,7 +32,8 @@ function filterAvailablePlants(plants: Plant[]): Plant[] {
 function buildCatalogSearchParams(
   category: string,
   query: string,
-  nativo: boolean | undefined
+  nativo: boolean | undefined,
+  viewMode: "large" | "compact"
 ): string {
   const params = new URLSearchParams();
 
@@ -46,6 +49,10 @@ function buildCatalogSearchParams(
     params.set("nativo", String(nativo));
   }
 
+  if (viewMode !== "large") {
+    params.set("view", viewMode);
+  }
+
   return params.toString();
 }
 
@@ -56,6 +63,7 @@ export default function PlantInfiniteGrid({
   category,
   query,
   nativo,
+  viewMode = "large",
   disableAutoLoad = false,
   lang: rawLang = "es",
 }: PlantInfiniteGridProps) {
@@ -65,7 +73,7 @@ export default function PlantInfiniteGrid({
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const catalogSearchParams = buildCatalogSearchParams(category, query, nativo);
+  const catalogSearchParams = buildCatalogSearchParams(category, query, nativo, viewMode);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasUserScrolledRef = useRef(false);
@@ -180,6 +188,33 @@ export default function PlantInfiniteGrid({
     };
   }, [disableAutoLoad, hasMore, isLoading, loadMore]);
 
+  const renderCardGrid = () => {
+    const gridClassName =
+      viewMode === "compact"
+        ? "mx-auto grid w-full max-w-7xl grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 overflow-hidden sm:gap-4 lg:gap-5"
+        : "mx-auto grid w-full max-w-7xl grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 overflow-hidden sm:gap-5 lg:gap-6";
+
+    return (
+      <div className={gridClassName}>
+        {plants.map((plant, index) => (
+          <div
+            key={plant.id}
+            className={`min-w-0 ${isSingleResult ? "lg:w-1/2 lg:max-w-[50%] lg:mx-auto" : ""}`}
+          >
+            <PlantCard
+              plant={plant}
+              priority={index === 0}
+              animationDelayMs={(index % 12) * 45}
+              lang={lang}
+              catalogSearchParams={catalogSearchParams}
+              size={viewMode === "compact" ? "compact" : "large"}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (disableAutoLoad) {
       return;
@@ -224,22 +259,7 @@ export default function PlantInfiniteGrid({
 
   return (
     <>
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 overflow-hidden sm:gap-5 lg:gap-6">
-        {plants.map((plant, index) => (
-          <div
-            key={plant.id}
-            className={`min-w-0 ${isSingleResult ? "lg:w-1/2 lg:max-w-[50%] lg:mx-auto" : ""}`}
-          >
-            <PlantCard
-              plant={plant}
-              priority={index === 0}
-              animationDelayMs={(index % 12) * 45}
-              lang={lang}
-              catalogSearchParams={catalogSearchParams}
-            />
-          </div>
-        ))}
-      </div>
+      {renderCardGrid()}
 
       {error && (
         <div className="mt-6 text-center text-sm text-red-600">

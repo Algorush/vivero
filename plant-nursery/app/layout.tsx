@@ -13,7 +13,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { getNurseryProfile } from "@/lib/notion";
 import { CartProvider } from "@/lib/cart-context";
 import DocumentLanguageSync from "@/components/DocumentLanguageSync";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import FloatingViewSwitcher from "@/components/FloatingViewSwitcher";
 import CartControls from "@/components/CartControls";
 
 const defaultDescription =
@@ -54,7 +54,7 @@ export default async function RootLayout({
             <DocumentLanguageSync />
           </Suspense>
           <Suspense fallback={null}>
-            <LanguageSwitcher />
+            <FloatingViewSwitcher />
           </Suspense>
           {children}
           <CartControls whatsappPhone={nurseryProfile.phone} />
