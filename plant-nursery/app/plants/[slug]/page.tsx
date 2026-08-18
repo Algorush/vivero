@@ -29,6 +29,14 @@ function sanitizePhoneToWa(value: string): string {
   return value.replace(/[^\d]/g, "");
 }
 
+function formatPrice(value: number): string {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -208,8 +216,8 @@ export default async function PlantPage({ params, searchParams }: PlantPageProps
       </p>
 
       {plant.price > 0 && (
-        <p className="mb-2 text-lg font-semibold text-green-700">
-          {copy.price}: ${plant.price}
+        <p className="mb-4 text-xl font-semibold text-[#2f5f4f]">
+          {formatPrice(plant.price)}
         </p>
       )}
 

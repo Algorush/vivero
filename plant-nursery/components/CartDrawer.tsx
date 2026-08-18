@@ -15,21 +15,15 @@ function sanitizePhoneToWa(value: string): string {
 }
 
 function buildOrderMessage(items: CartItem[], lang: SiteLanguage): string {
-  const copy = getUiCopy(lang);
   const lines = items.map(
     (item, index) =>
-      `${index + 1}. ${item.name} x${item.quantity}${
-        item.price > 0 ? ` - $${item.price * item.quantity}` : ""
-      }`
+      `${index + 1}. ${item.name} x${item.quantity}`
   );
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return [
     lang === "en" ? "Hi! I am interested in these plants:" : "Hola! Me interesan estas plantas:",
     "",
     ...lines,
-    "",
-    total > 0 ? `${copy.cartTotal}: $${total}` : "",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -97,11 +91,6 @@ export default function CartDrawer({ whatsappPhone, lang: rawLang = "es" }: Cart
                     <p className="truncate text-sm font-medium text-[#1f1a17]">
                       {item.name}
                     </p>
-                    {item.price > 0 && (
-                      <p className="text-xs text-zinc-500">
-                        ${item.price} {copy.cartUnit}
-                      </p>
-                    )}
                     <div className="mt-1 flex items-center gap-2">
                       <button
                         type="button"

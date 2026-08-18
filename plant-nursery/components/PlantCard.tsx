@@ -5,6 +5,14 @@ import { Plant } from "@/types/plant";
 import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 import { getCategoryLabel } from "@/lib/ui-copy";
 
+function formatPrice(value: number): string {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 type PlantCardProps = {
   plant: Plant;
   priority?: boolean;
@@ -57,7 +65,7 @@ export default function PlantCard({
 
           {plant.price > 0 && (
             <p className={size === "compact" ? "mt-2 text-sm font-semibold text-[#2f5f4f]" : "mt-2 text-base font-semibold text-[#2f5f4f]"}>
-              ${plant.price}
+              {formatPrice(plant.price)}
             </p>
           )}
 
