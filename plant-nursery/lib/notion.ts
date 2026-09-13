@@ -205,6 +205,89 @@ function getOrBuildSearchIndex(plants: Plant[]): MiniSearch<Plant> {
   return searchIndex;
 }
 
+const QUERY_STOPWORDS = new Set(["y", "e", "o", "u", "and", "or", "de", "del", "la", "el", "los", "las", "con", "the", "a"]);
+
+function normalizeForMatch(value: string): string {
+  return normalizeSearchText(value);
+}
+
+function getCategoryCandidates(plants: Plant[]): { original: string; normalized: string }[] {
+  const categories = new Map<string, string>();
+
+  for (const plant of plants) {
+    const category = plant.category?.trim();
+    if (!category) {
+      continue;
+    }
+
+    const normalized = normalizeForMatch(category);
+    if (!categories.has(normalized)) {
+      categories.set(normalized, category);
+    }
+  }
+
+  return Array.from(categories.entries()).map(([normalized, original]) => ({ normalized, original }));
+}
+
+function searchPlantsInMemory(plants: Plant[], query: string): Plant[] {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return plants;
+  }
+
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+  const meaningfulWords = queryWords.filter((word) => !QUERY_STOPWORDS.has(normalizeForMatch(word)));
+  const categories = getCategoryCandidates(plants);
+
+  if (meaningfulWords.length > 0) {
+    const matchedCategories = new Set<string>();
+    let allWordsMatchCategories = true;
+
+    for (const word of meaningfulWords) {
+      const wordNormalized = normalizeForMatch(word);
+      const match = categories.find((item) => item.normalized === wordNormalized);
+
+      if (match) {
+        matchedCategories.add(match.original);
+      } else {
+        allWordsMatchCategories = false;
+        break;
+      }
+    }
+
+    if (allWordsMatchCategories && matchedCategories.size > 0) {
+      return plants.filter((plant) => matchedCategories.has(plant.category));
+    }
+  }
+
+  if (queryWords.length <= 3) {
+    const normalizedFullQuery = normalizeForMatch(normalizedQuery);
+    const escapedQuery = normalizedFullQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const wordBoundaryRegex = new RegExp(`\\b${escapedQuery}\\b`);
+
+    const matchedValuesByField = (field: keyof Plant) =>
+      Array.from(new Set(plants.map((plant) => String(plant[field] ?? "").trim()).filter(Boolean)))
+        .filter((value) => wordBoundaryRegex.test(normalizeForMatch(value)));
+
+    const exposureMatches = matchedValuesByField("exposicion");
+    if (exposureMatches.length > 0) {
+      return plants.filter((plant) => exposureMatches.includes(plant.exposicion));
+    }
+
+    const wateringMatches = matchedValuesByField("riego");
+    if (wateringMatches.length > 0) {
+      return plants.filter((plant) => wateringMatches.includes(plant.riego));
+    }
+  }
+
+  const index = getOrBuildSearchIndex(plants);
+  const results = index.search(query);
+
+  return results
+    .map((result) => plants.find((plant) => plant.id === result.id))
+    .filter((plant): plant is Plant => plant !== undefined);
+}
+
 function parseOffsetCursor(cursor: string): number {
   if (!cursor.startsWith("offset:")) {
     return 0;
@@ -246,6 +329,21 @@ function getNotionProperty(properties: Record<string, unknown>, fieldName: strin
   for (const [key, value] of Object.entries(properties)) {
     if (normalizeNotionFieldName(key) === target) {
       return value as NotionPropertyValue;
+    }
+  }
+
+  return undefined;
+}
+
+function getNotionPropertyByAliases(
+  properties: Record<string, unknown>,
+  fieldNames: string[]
+): NotionPropertyValue | undefined {
+  for (const fieldName of fieldNames) {
+    const property = getNotionProperty(properties, fieldName);
+
+    if (property) {
+      return property;
     }
   }
 
@@ -545,11 +643,11 @@ function mapPlant(page: NotionPage, imageMap: ImageMap = {}, lang: SiteLanguage 
     utilizacion: localizedValue(lang, getLocalizedText(properties, "Utilizacion", "es"), getLocalizedText(properties, "Utilizacion", "en")),
     propagacion: localizedValue(lang, getLocalizedText(properties, "Propagacion", "es"), getLocalizedText(properties, "Propagacion", "en")),
     medicinal: localizedValue(lang, getLocalizedText(properties, "Medicinal", "es"), getLocalizedText(properties, "Medicinal", "en")),
-    category: getNotionProperty(properties, "Category")?.select?.name || "",
-    nativo: getNotionProperty(properties, "Nativo")?.checkbox ?? false,
-    price: getNotionProperty(properties, "Price")?.number || 0,
-    amount: getNotionProperty(properties, "Amount")?.number || 0,
-    available: getNotionProperty(properties, "Available")?.checkbox || false,
+    category: getNotionPropertyByAliases(properties, ["Category", "Categoria", "Categoría"])?.select?.name || "",
+    nativo: getNotionPropertyByAliases(properties, ["Nativo", "Native"])?.checkbox ?? false,
+    price: getNotionPropertyByAliases(properties, ["Price", "Precio"])?.number || 0,
+    amount: getNotionPropertyByAliases(properties, ["Amount", "Cantidad"])?.number || 0,
+    available: getNotionPropertyByAliases(properties, ["Available", "Disponible"])?.checkbox || false,
     image: allImages[0] ?? "",
     images: allImages,
   };
@@ -650,16 +748,11 @@ export async function getPlantsPage(
     let candidates: Plant[];
 
     if (query) {
-      const index = getOrBuildSearchIndex(allPlants);
-      const results = index.search(query);
-      candidates = results
-        .map((r) => allPlants.find((p) => p.id === r.id))
-        .filter((p): p is Plant => p !== undefined)
-        .filter((plant) => {
-          if (category && normalizeSearchText(plant.category ?? "") !== normalizedCategory) return false;
-          if (nativo !== undefined && plant.nativo !== nativo) return false;
-          return true;
-        });
+      candidates = searchPlantsInMemory(allPlants, query).filter((plant) => {
+        if (category && normalizeSearchText(plant.category ?? "") !== normalizedCategory) return false;
+        if (nativo !== undefined && plant.nativo !== nativo) return false;
+        return true;
+      });
     } else {
       candidates = allPlants.filter((plant) => {
         if (category && normalizeSearchText(plant.category ?? "") !== normalizedCategory) return false;

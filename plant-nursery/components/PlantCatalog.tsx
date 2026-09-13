@@ -124,6 +124,13 @@ export default function PlantCatalog({
   ) => {
     const nextQuery = rawQuery.trim();
 
+    console.log("[catalog-search] apply", {
+      query: nextQuery,
+      category: nextCategory || undefined,
+      nativo: nextNativo,
+      lang,
+    });
+
     if (
       normalize(nextCategory) === normalize(activeCategoryRef.current) &&
       nextQuery === activeQueryRef.current &&
@@ -318,6 +325,7 @@ export default function PlantCatalog({
       : activeNativo === false
         ? "Fillke Anumka"
         : "";
+  const catalogSearchParams = createFilterUrl(activeCategory, activeQuery, activeNativo, viewMode, lang).slice(2);
 
   return (
     <>
@@ -474,6 +482,7 @@ export default function PlantCatalog({
           query={activeQuery}
           nativo={activeNativo}
           viewMode={viewMode}
+          catalogSearchParams={catalogSearchParams}
           lang={lang}
           disableAutoLoad={Boolean(activeQuery.trim())}
         />

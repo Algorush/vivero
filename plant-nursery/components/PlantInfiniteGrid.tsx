@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import PlantCard from "@/components/PlantCard";
@@ -15,6 +14,7 @@ type PlantInfiniteGridProps = {
   query: string;
   nativo?: boolean;
   viewMode?: "large" | "compact";
+  catalogSearchParams?: string;
   disableAutoLoad?: boolean;
   lang?: SiteLanguage;
 };
@@ -64,6 +64,7 @@ export default function PlantInfiniteGrid({
   query,
   nativo,
   viewMode = "large",
+  catalogSearchParams: catalogSearchParamsOverride = "",
   disableAutoLoad = false,
   lang: rawLang = "es",
 }: PlantInfiniteGridProps) {
@@ -73,7 +74,7 @@ export default function PlantInfiniteGrid({
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const catalogSearchParams = buildCatalogSearchParams(category, query, nativo, viewMode);
+  const catalogSearchParams = catalogSearchParamsOverride || buildCatalogSearchParams(category, query, nativo, viewMode);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasUserScrolledRef = useRef(false);
