@@ -325,7 +325,13 @@ export default function PlantCatalog({
       : activeNativo === false
         ? "Fillke Anumka"
         : "";
-  const catalogSearchParams = createFilterUrl(activeCategory, activeQuery, activeNativo, viewMode, lang).slice(2);
+  const catalogSearchParams = createFilterUrl(
+    activeCategory,
+    activeQuery,
+    activeNativo,
+    viewMode,
+    lang
+  ).slice(2);
 
   return (
     <>

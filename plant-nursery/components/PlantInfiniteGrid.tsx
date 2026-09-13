@@ -13,8 +13,12 @@ type PlantInfiniteGridProps = {
   category: string;
   query: string;
   nativo?: boolean;
-  viewMode?: "large" | "compact";
   catalogSearchParams?: string;
+  interior?: boolean;
+  exterior?: boolean;
+  favoritaPaisajistas?: boolean;
+  sort?: "default" | "alpha";
+  viewMode?: "large" | "compact";
   disableAutoLoad?: boolean;
   lang?: SiteLanguage;
 };
@@ -33,6 +37,10 @@ function buildCatalogSearchParams(
   category: string,
   query: string,
   nativo: boolean | undefined,
+  interior: boolean | undefined,
+  exterior: boolean | undefined,
+  favoritaPaisajistas: boolean | undefined,
+  sort: "default" | "alpha",
   viewMode: "large" | "compact"
 ): string {
   const params = new URLSearchParams();
@@ -49,6 +57,22 @@ function buildCatalogSearchParams(
     params.set("nativo", String(nativo));
   }
 
+  if (interior) {
+    params.set("interior", "true");
+  }
+
+  if (exterior) {
+    params.set("exterior", "true");
+  }
+
+  if (favoritaPaisajistas) {
+    params.set("paisajistas", "true");
+  }
+
+  if (sort === "alpha") {
+    params.set("sort", "alpha");
+  }
+
   if (viewMode !== "large") {
     params.set("view", viewMode);
   }
@@ -63,8 +87,12 @@ export default function PlantInfiniteGrid({
   category,
   query,
   nativo,
-  viewMode = "large",
   catalogSearchParams: catalogSearchParamsOverride = "",
+  interior,
+  exterior,
+  favoritaPaisajistas,
+  sort = "default",
+  viewMode = "large",
   disableAutoLoad = false,
   lang: rawLang = "es",
 }: PlantInfiniteGridProps) {
@@ -74,7 +102,18 @@ export default function PlantInfiniteGrid({
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const catalogSearchParams = catalogSearchParamsOverride || buildCatalogSearchParams(category, query, nativo, viewMode);
+  const catalogSearchParams =
+    catalogSearchParamsOverride ||
+    buildCatalogSearchParams(
+      category,
+      query,
+      nativo,
+      interior,
+      exterior,
+      favoritaPaisajistas,
+      sort,
+      viewMode
+    );
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasUserScrolledRef = useRef(false);
@@ -101,9 +140,13 @@ export default function PlantInfiniteGrid({
         category: category || undefined,
         query: query || undefined,
         nativo,
+        interior,
+        exterior,
+        favoritaPaisajistas,
         cursor: nextCursor,
         pageSize: 12,
         lang,
+        sort: sort === "alpha" ? "alpha" : undefined,
       };
 
       const response = await fetch("/api/plants", {
@@ -152,7 +195,7 @@ export default function PlantInfiniteGrid({
     } finally {
       setIsLoading(false);
     }
-  }, [category, hasMore, isLoading, lang, nativo, nextCursor, query]);
+  }, [category, hasMore, isLoading, lang, nativo, nextCursor, query, sort, interior, exterior, favoritaPaisajistas]);
 
   useEffect(() => {
     if (disableAutoLoad) {

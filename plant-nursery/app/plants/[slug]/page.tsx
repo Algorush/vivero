@@ -14,7 +14,17 @@ type PlantPageProps = {
   params: Promise<{
     slug: string;
   }>;
-  searchParams?: Promise<{ lang?: string; category?: string; q?: string; nativo?: string; view?: string }>;
+  searchParams?: Promise<{
+    lang?: string;
+    category?: string;
+    q?: string;
+    nativo?: string;
+    interior?: string;
+    exterior?: string;
+    paisajistas?: string;
+    sort?: string;
+    view?: string;
+  }>;
 };
 
 function truncate(value: string, maxLength: number): string {
@@ -125,6 +135,18 @@ export default async function PlantPage({ params, searchParams }: PlantPageProps
   }
   if (search?.nativo === "true" || search?.nativo === "false") {
     catalogParams.set("nativo", search.nativo);
+  }
+  if (search?.interior === "true") {
+    catalogParams.set("interior", "true");
+  }
+  if (search?.exterior === "true") {
+    catalogParams.set("exterior", "true");
+  }
+  if (search?.paisajistas === "true") {
+    catalogParams.set("paisajistas", "true");
+  }
+  if (search?.sort === "alpha") {
+    catalogParams.set("sort", "alpha");
   }
   if (search?.view === "compact") {
     catalogParams.set("view", "compact");
