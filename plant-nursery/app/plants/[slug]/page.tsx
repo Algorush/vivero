@@ -7,7 +7,7 @@ import AddToCartButton from "@/components/AddToCartButton";
 
 import { getNurseryProfile, getPlantBySlug } from "@/lib/notion";
 import { getCategoryLabel, getUiCopy } from "@/lib/ui-copy";
-import { SITE_URL } from "@/lib/site-config";
+import { SHOW_PLANT_PRICES, SITE_URL } from "@/lib/site-config";
 import { appendLanguageParam, normalizeSiteLanguage } from "@/lib/site-language";
 
 type PlantPageProps = {
@@ -160,7 +160,7 @@ export default async function PlantPage({ params, searchParams }: PlantPageProps
     image: plant.images?.length > 0 ? plant.images : plant.image ? [plant.image] : undefined,
     url: `${SITE_URL}/plants/${plant.slug}`,
     offers:
-      plant.price > 0
+      SHOW_PLANT_PRICES && plant.price > 0
         ? {
             "@type": "Offer",
             priceCurrency: "CLP",
@@ -215,7 +215,7 @@ export default async function PlantPage({ params, searchParams }: PlantPageProps
         {copy.category}: {getCategoryLabel(lang, plant.category)}
       </p>
 
-      {plant.price > 0 && (
+      {SHOW_PLANT_PRICES && plant.price > 0 && (
         <p className="mb-4 text-xl font-semibold text-[#2f5f4f]">
           {formatPrice(plant.price)}
         </p>

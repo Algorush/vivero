@@ -3,3 +3,4 @@ export const SITE_URL = (
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "Vivero Karū-lemu";
+export const SHOW_PLANT_PRICES = false;

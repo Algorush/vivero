@@ -4,6 +4,7 @@ import AddToCartButton from "@/components/AddToCartButton";
 import { Plant } from "@/types/plant";
 import { appendLanguageParam, normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
 import { getCategoryLabel } from "@/lib/ui-copy";
+import { SHOW_PLANT_PRICES } from "@/lib/site-config";
 
 function formatPrice(value: number): string {
   return new Intl.NumberFormat("es-CL", {
@@ -63,7 +64,7 @@ export default function PlantCard({
             {getCategoryLabel(lang, plant.category)}
           </p>
 
-          {plant.price > 0 && (
+          {SHOW_PLANT_PRICES && plant.price > 0 && (
             <p className={size === "compact" ? "mt-2 text-sm font-semibold text-[#2f5f4f]" : "mt-2 text-base font-semibold text-[#2f5f4f]"}>
               {formatPrice(plant.price)}
             </p>
