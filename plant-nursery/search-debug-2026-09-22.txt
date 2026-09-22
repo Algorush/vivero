@@ -1,0 +1,155 @@
+Search debug report for plant-nursery
+Date: 2026-09-22
+
+Goal
+- Inspect the current search algorithm for queries around shade, low watering, and small gardens.
+- Check how Gemini Flash intent parsing and the backend retrieval/ranking behave in practice.
+
+Current search path in the app
+1. Gemini Flash parses the user query into a structured intent.
+2. The backend derives search expansions and filters from that intent.
+3. If the query strongly signals watering needs, the riego-specific branch can run first.
+4. Otherwise the backend falls back to category matching, exact attribute matching, and hybrid search.
+5. Final ranking is returned from Postgres-backed retrieval, not from Gemini alone.
+
+Important observation
+- The current logic is good at recognizing "poco riego" / "sombra" as care signals.
+- It is weaker at handling the combination of shade + low water + small garden when the query does not explicitly name a category like "árbol".
+- In those cases, the top results are often drought-tolerant plants, but not always shade-tolerant ones.
+- The search still returns relevant plants in the broad sense, but the ordering is not yet optimal for the full intent.
+
+Query 1
+- Query: plantas para sombra y poco riego
+- Parsed intent:
+  - intent: care
+  - rewrittenQuery: sombra poco riego
+  - fieldWeights: exposicion=3, riego=3, description=1
+  - expansions: sombra, poco riego, riego escaso, sequia
+  - confidence: 0.9
+- Result count: 49
+- Top 10 results:
+  1. Araucaria / Pehuén
+  2. Berberis
+  3. Boldo
+  4. Ciprés de la cordillera
+  5. Erica
+  6. Grevillea
+  7. Laurel de cocina
+  8. Leptospermum rojo
+  9. Romero
+  10. Spirea Thunbergii
+- Relevance analysis:
+  - Positive: Boldo, Ciprés de la cordillera, Grevillea, Laurel de cocina, Romero match low-water needs well.
+  - Problem: Araucaria is ranked #1, but its own exposure text says it does not tolerate prolonged shade. That is a mismatch for a query explicitly asking for shade.
+  - Problem: Berberis is also very sun-oriented, so it is not a strong match for shade either.
+  - Overall: moderate relevance on watering, weak-to-medium relevance on shade. The ranking is too broad.
+
+Query 2
+- Query: arbol para sombra y poco riego
+- Parsed intent:
+  - intent: mixed
+  - rewrittenQuery: arbol sombra poco riego
+  - filters: category=Arbol, available=true
+  - fieldWeights: category=2, exposicion=2, riego=3, utilization=2, description=1
+  - expansions: resistente a la sequia, poca agua, tolerante a sequia
+  - confidence: 0.9
+- Result count: 13
+- Top 10 results:
+  1. Boldo
+  2. Grevillea
+  3. Laurel de cocina
+  4. Acer japonés
+  5. Arrayán
+  6. Canelo
+  7. Coigüe de Magallanes
+  8. Laurel chileno
+  9. Luma
+  10. Olivillo
+- Relevance analysis:
+  - Positive: Boldo is a strong match for low watering, and Grevillea / Laurel de cocina are plausible low-water trees.
+  - Problem: Acer japonés is ranked above Arrayán, Canelo, etc., even though its watering is moderate and it is less aligned with low-water needs than Boldo/Grevillea/Laurel de cocina.
+  - Problem: Canelo, Coigüe de Magallanes, Laurel chileno, and Luma are shade-tolerant, but several of them need moderate or high watering, so they are not ideal for the full query.
+  - Overall: better than query 1 because the explicit category "arbol" improves the candidate set, but shade vs low-water balance is still imperfect.
+
+Query 3
+- Query: planta nativa para sombra y poco riego
+- Parsed intent:
+  - intent: mixed
+  - rewrittenQuery: planta nativa para sombra y poco riego
+  - filters: available=true
+  - fieldWeights: riego=3, exposicion=2, description=1
+  - expansions: poco riego, resistente a la sequia, sombra parcial, sol parcial
+  - confidence: 0.35
+- Result count: 49
+- Top 10 results:
+  1. Araucaria / Pehuén
+  2. Berberis
+  3. Boldo
+  4. Ciprés de la cordillera
+  5. Erica
+  6. Grevillea
+  7. Laurel de cocina
+  8. Leptospermum rojo
+  9. Romero
+  10. Spirea Thunbergii
+- Relevance analysis:
+  - Positive: Araucaria / Pehuén, Boldo, Ciprés de la cordillera, and Romero fit low-water intent or are hardy.
+  - Problem: the query asks for native plants, but the top 2 results are not the best overall fit for shade. Araucaria especially conflicts with the shade part because it needs open sun and does not tolerate prolonged shade.
+  - Problem: the current parser did not extract a native filter here; it only kept available=true, so the retrieval remains broad.
+  - Overall: weak on the native signal, weak on the shade signal, decent on low-water.
+
+Query 4
+- Query: jardin pequeno con sombra y poco riego
+- Parsed intent:
+  - intent: mixed
+  - rewrittenQuery: jardin pequeno con sombra y poco riego
+  - filters: available=true
+  - fieldWeights: riego=3, exposicion=2, description=1, tamano=2
+  - expansions: poco riego, resistente a la sequia, sombra parcial, sol parcial, jardin pequeno, crecimiento compacto
+  - confidence: 0.35
+- Result count: 49
+- Top 10 results:
+  1. Araucaria / Pehuén
+  2. Berberis
+  3. Boldo
+  4. Ciprés de la cordillera
+  5. Erica
+  6. Grevillea
+  7. Laurel de cocina
+  8. Leptospermum rojo
+  9. Romero
+  10. Spirea Thunbergii
+- Relevance analysis:
+  - Positive: the parser correctly noticed the small-garden intent and added tamano-related weighting.
+  - Problem: the ranking still surfaces very large trees such as Araucaria / Pehuén first, which is a poor fit for a small garden.
+  - Problem: compact shrubs like Berberis, Erica, Romero, and Spirea are more suitable for a small space, but they are not boosted enough by the current ranking.
+  - Overall: better intent understanding than query 1, but the final ranking is still too tree-heavy and not compactness-aware enough.
+
+Summary of what is working
+- Gemini Flash is successfully extracting care-related signals in many cases.
+- The backend correctly returns low-water species in the results.
+- Explicit category hints such as "arbol" improve relevance noticeably.
+- After adding the query-aware rerank layer, the ordering improved for mixed queries.
+- Small-garden queries now surface compact plants earlier instead of leading with large trees.
+
+Summary of what is failing
+- Shade and low-water are still not perfectly balanced for the first query, but the worst mismatches are reduced.
+- Native intent is still not consistently extracted as a hard filter.
+- Some large trees remain present for broad queries that do not name a category, but they are no longer dominating the top positions as much.
+
+Practical conclusion
+- The current algorithm is usable, but it needs better intent-to-ranking translation for combined constraints.
+- The biggest improvement opportunity is to add a rerank layer or stronger scoring for:
+  - exposure match
+  - low-water match
+  - size/compactness match
+  - native filter when the query explicitly asks for native plants
+- The rerank layer is the correct direction for this codebase because the raw retrieval branches are already useful, but they need a final normalization step when multiple constraints appear together.
+
+Suggested next improvement
+- Add a rerank step for complex queries that scores top candidates against the combined intent instead of relying mostly on retrieval order.
+- Prioritize candidates that satisfy all of these simultaneously when present:
+  - shade or semisombra
+  - bajo riego
+  - compact size for small gardens
+  - native if requested

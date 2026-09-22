@@ -51,6 +51,13 @@ type SearchResult = {
   total: number;
 };
 
+type SearchRankingContext = {
+  searchIntent: SearchIntent | null;
+  queryWords: string[];
+  effectiveCategory: string;
+  effectiveNativo?: boolean;
+};
+
 type ExactSearchField = Exclude<SearchField, "name" | "category" | "description">;
 
 const QUERY_STOPWORDS = new Set(["y", "e", "o", "u", "and", "or", "de", "del", "la", "el", "los", "las", "con", "the", "a"]);
@@ -139,6 +146,150 @@ function reciprocalRankFuse(rankedLists: Plant[][]): Plant[] {
     .sort((a, b) => b[1] - a[1])
     .map(([id]) => plantById.get(id)!)
     .filter(Boolean);
+}
+
+const SHade_HINT_WORDS = new Set(["sombra", "semisombra"]);
+const LOW_WATER_HINT_WORDS = new Set(["bajo", "baja", "bajos", "bajas", "escaso", "escasa", "escasos", "escasas", "poco", "sequia", "sequia"]);
+const SIZE_HINT_WORDS = new Set(["pequeno", "pequena", "pequenos", "pequenas", "chico", "chica", "compacto", "compacta", "jardin", "patio", "maceta", "mini"]);
+
+function scoreNeedleMatches(text: string, needles: string[]): number {
+  const normalizedText = normalizeForMatch(text);
+  return needles.reduce((score, needle) => (normalizedText.includes(normalizeForMatch(needle)) ? score + 1 : score), 0);
+}
+
+function extractMaxHeight(value: string): number | null {
+  const normalized = normalizeForMatch(value);
+  const heightMatch = normalized.match(/altura[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(?:[–-]\s*([0-9]+(?:\.[0-9]+)?))?\s*m/);
+
+  if (heightMatch) {
+    const parsed = Number(heightMatch[2] ?? heightMatch[1]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const genericMatches = Array.from(normalized.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*m/g))
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isFinite(value));
+
+  if (genericMatches.length === 0) {
+    return null;
+  }
+
+  return Math.max(...genericMatches);
+}
+
+function hasAnyWord(queryWords: string[], candidates: Set<string>): boolean {
+  return queryWords.some((word) => candidates.has(normalizeForMatch(word)));
+}
+
+function getPlantRankScore(plant: Plant, context: SearchRankingContext): number {
+  const { searchIntent, queryWords, effectiveCategory, effectiveNativo } = context;
+  const normalizedCategory = normalizeForMatch(plant.category);
+  const normalizedName = normalizeForMatch(plant.name);
+  const normalizedDescription = normalizeForMatch(plant.description);
+  const normalizedRiego = normalizeForMatch(plant.riego);
+  const normalizedExposure = normalizeForMatch(plant.exposicion);
+  const normalizedSize = normalizeForMatch(plant.tamano);
+  const normalizedUse = normalizeForMatch(plant.utilizacion);
+
+  let score = 0;
+
+  if (effectiveCategory) {
+    score += normalizedCategory === normalizeForMatch(effectiveCategory) ? 8 : -4;
+  }
+
+  if (effectiveNativo !== undefined) {
+    score += plant.nativo === effectiveNativo ? 3 : -1;
+  }
+
+  score += scoreNeedleMatches(normalizedName, queryWords) * 2;
+  score += scoreNeedleMatches(normalizedDescription, queryWords);
+  score += scoreNeedleMatches(normalizedUse, queryWords) * 0.5;
+
+  const hasShadeSignal = hasAnyWord(queryWords, SHade_HINT_WORDS) || (searchIntent?.fieldWeights.exposicion ?? 0) >= 2;
+  const hasLowWaterSignal = hasAnyWord(queryWords, LOW_WATER_HINT_WORDS) || (searchIntent?.fieldWeights.riego ?? 0) >= 2;
+  const hasSizeSignal = hasAnyWord(queryWords, SIZE_HINT_WORDS) || (searchIntent?.fieldWeights.tamano ?? 0) >= 2;
+
+  if (hasShadeSignal) {
+    if (normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra")) {
+      score += 8;
+    } else if (normalizedExposure.includes("sol pleno") || normalizedExposure.includes("sol directo")) {
+      score -= 6;
+    }
+  }
+
+  if (hasLowWaterSignal) {
+    if (normalizedRiego.includes("bajo") || normalizedRiego.includes("escas") || normalizedRiego.includes("poco")) {
+      score += 8;
+    } else if (normalizedRiego.includes("moderad")) {
+      score += 2;
+    } else if (normalizedRiego.includes("alto") || normalizedRiego.includes("humedad constante")) {
+      score -= 5;
+    }
+  }
+
+  if (hasSizeSignal) {
+    const maxHeight = extractMaxHeight(plant.tamano);
+    if (maxHeight !== null) {
+      if (maxHeight <= 2.5) {
+        score += 8;
+      } else if (maxHeight <= 5) {
+        score += 5;
+      } else if (maxHeight <= 8) {
+        score += 2;
+      } else if (maxHeight <= 12) {
+        score -= 1;
+      } else {
+        score -= 5;
+      }
+    }
+
+    if (normalizedSize.includes("compact") || normalizedSize.includes("pequen") || normalizedCategory === "arbusto" || normalizedCategory === "cubresuelo") {
+      score += 3;
+    }
+  }
+
+  if (searchIntent?.intent === "care" || searchIntent?.intent === "mixed") {
+    if (searchIntent.fieldWeights.exposicion) {
+      score += normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra") ? 2 : 0;
+    }
+
+    if (searchIntent.fieldWeights.riego) {
+      score += normalizedRiego.includes("bajo") ? 2 : 0;
+    }
+  }
+
+  return score;
+}
+
+function rerankPlants(plants: Plant[], context: SearchRankingContext): Plant[] {
+  return plants
+    .map((plant, index) => ({
+      plant,
+      index,
+      score: getPlantRankScore(plant, context),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      return a.index - b.index;
+    })
+    .map((entry) => entry.plant);
+}
+
+function buildSearchRankingContext(
+  searchIntent: SearchIntent | null,
+  query: string,
+  effectiveCategory: string,
+  effectiveNativo?: boolean
+): SearchRankingContext {
+  return {
+    searchIntent,
+    queryWords: query.split(/\s+/).map((word) => normalizeForMatch(word)).filter(Boolean),
+    effectiveCategory,
+    effectiveNativo,
+  };
 }
 
 function rowToPlant(row: Record<string, unknown>, lang: SiteLanguage): Plant {
@@ -238,6 +389,7 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     .join(" ");
   const queryWords = searchQuery.split(/\s+/).filter(Boolean);
   const exactFields = getPriorityExactFields(searchIntent);
+  const rankingContext = buildSearchRankingContext(searchIntent, searchQuery, effectiveCategory, effectiveNativo);
 
   if (isRiegoQuery(searchIntent, queryWords)) {
     const riegoHints = getRiegoTargetHints(queryWords);
@@ -250,7 +402,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     });
 
     if (result.total > 0) {
-      return result;
+      return {
+        ...result,
+        plants: rerankPlants(result.plants, rankingContext),
+      };
     }
   }
 
@@ -286,7 +441,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
           lang,
         });
 
-        return result;
+        return {
+          ...result,
+          plants: rerankPlants(result.plants, rankingContext),
+        };
       }
     }
 
@@ -310,7 +468,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       if (allWordsMatchCategories && matchedCategories.size > 0) {
         const result = await categorySearch(Array.from(matchedCategories), { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-        return result;
+        return {
+          ...result,
+          plants: rerankPlants(result.plants, rankingContext),
+        };
       }
     }
   }
@@ -331,7 +492,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await attributeSearch(column, matchedValues, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.total > 0) {
-        return result;
+        return {
+          ...result,
+          plants: rerankPlants(result.plants, rankingContext),
+        };
       }
     }
   }
@@ -360,7 +524,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
   if (hasLiteralMatch) {
     const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-    return result;
+    return {
+      ...result,
+      plants: rerankPlants(result.plants, rankingContext),
+    };
   }
 
   if (process.env.GEMINI_API_KEY) {
@@ -368,7 +535,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await hybridSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.plants.length > 0) {
-        return result;
+        return {
+          ...result,
+          plants: rerankPlants(result.plants, rankingContext),
+        };
       }
     } catch {
     }
@@ -376,7 +546,10 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
 
   const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-  return result;
+  return {
+    ...result,
+    plants: rerankPlants(result.plants, rankingContext),
+  };
 }
 
 /**
