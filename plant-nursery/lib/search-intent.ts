@@ -85,12 +85,140 @@ const SEARCH_FIELDS: SearchField[] = [
   "medicinal",
 ];
 
+const CARE_HINT_WORDS = new Set([
+  "riego",
+  "agua",
+  "sequia",
+  "sequia",
+  "humedad",
+  "sombra",
+  "sol",
+  "semisombra",
+]);
+
+const SIZE_HINT_WORDS = new Set([
+  "pequeno",
+  "pequena",
+  "pequenos",
+  "pequenas",
+  "chico",
+  "chica",
+  "compacto",
+  "compacta",
+  "jardin",
+  "patio",
+  "maceta",
+  "mini",
+]);
+
+const APPEARANCE_HINT_WORDS = new Set([
+  "sombra",
+  "flor",
+  "flores",
+  "hoja",
+  "hojas",
+  "copa",
+  "altura",
+]);
+
 function normalizeText(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+}
+
+function tokenizeQuery(query: string): string[] {
+  return normalizeText(query)
+    .split(/\s+/)
+    .map((word) => word.replace(/[^a-z0-9]/g, ""))
+    .filter(Boolean);
+}
+
+function buildFallbackSearchIntent(input: SearchIntentInput): SearchIntent | null {
+  const query = input.query.trim();
+  if (!query) {
+    return null;
+  }
+
+  const normalizedWords = tokenizeQuery(query);
+  const categoryCandidates = (input.categories ?? [])
+    .map((category) => category.trim())
+    .filter(Boolean);
+  const normalizedCategories = new Map(categoryCandidates.map((category) => [normalizeText(category), category] as const));
+  const matchedCategory = normalizedWords
+    .map((word) => normalizedCategories.get(word))
+    .find((value): value is string => Boolean(value));
+
+  const hasCareSignals = normalizedWords.some((word) => CARE_HINT_WORDS.has(word));
+  const hasSizeSignals = normalizedWords.some((word) => SIZE_HINT_WORDS.has(word));
+  const hasAppearanceSignals = normalizedWords.some((word) => APPEARANCE_HINT_WORDS.has(word));
+  const hasCategorySignal = Boolean(matchedCategory);
+
+  if (!hasCategorySignal && !hasCareSignals && !hasSizeSignals && !hasAppearanceSignals) {
+    return null;
+  }
+
+  const intent: SearchIntent["intent"] =
+    hasCategorySignal && (hasCareSignals || hasSizeSignals || hasAppearanceSignals)
+      ? "mixed"
+      : hasCareSignals && (hasSizeSignals || hasAppearanceSignals)
+        ? "mixed"
+        : hasCategorySignal
+          ? "category"
+          : hasCareSignals
+            ? "care"
+            : hasAppearanceSignals
+              ? "appearance"
+              : "mixed";
+
+  const fieldWeights: Partial<Record<SearchField, number>> = {};
+  if (hasCategorySignal) {
+    fieldWeights.category = 3;
+    fieldWeights.name = 2;
+  }
+  if (hasCareSignals) {
+    fieldWeights.riego = 3;
+    fieldWeights.exposicion = 2;
+  }
+  if (hasAppearanceSignals) {
+    fieldWeights.exposicion = Math.max(fieldWeights.exposicion ?? 0, 2);
+    fieldWeights.description = Math.max(fieldWeights.description ?? 0, 1);
+  }
+  if (hasSizeSignals) {
+    fieldWeights.tamano = 2;
+    fieldWeights.description = Math.max(fieldWeights.description ?? 0, 1);
+  }
+
+  const expansions = new Set<string>();
+  if (hasCareSignals) {
+    expansions.add("poco riego");
+    expansions.add("resistente a la sequia");
+  }
+  if (hasAppearanceSignals) {
+    expansions.add("sombra parcial");
+    expansions.add("sol parcial");
+  }
+  if (hasSizeSignals) {
+    expansions.add("jardin pequeno");
+    expansions.add("crecimiento compacto");
+  }
+
+  return {
+    intent,
+    rewrittenQuery: query,
+    filters: {
+      category: matchedCategory,
+      available: true,
+    },
+    fieldWeights,
+    expansions: Array.from(expansions),
+    sort: "relevance",
+    confidence: 0.35,
+    needsClarification: false,
+    clarificationQuestion: undefined,
+  };
 }
 
 function buildPrompt(input: SearchIntentInput): string {
@@ -177,7 +305,7 @@ function sanitizeSearchIntent(raw: unknown, input: SearchIntentInput): SearchInt
     intent !== "mixed" &&
     intent !== "unclear"
   ) {
-    return null;
+    return buildFallbackSearchIntent(input);
   }
 
   return {
@@ -230,14 +358,14 @@ async function callGeminiSearchIntent(input: SearchIntentInput): Promise<SearchI
   const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
 
   if (!text) {
-    return null;
+    return buildFallbackSearchIntent(input);
   }
 
   try {
     const parsed = JSON.parse(text) as unknown;
-    return sanitizeSearchIntent(parsed, input);
+    return sanitizeSearchIntent(parsed, input) ?? buildFallbackSearchIntent(input);
   } catch {
-    return null;
+    return buildFallbackSearchIntent(input);
   }
 }
 
@@ -268,7 +396,11 @@ export async function parseSearchIntent(input: SearchIntentInput): Promise<Searc
         categories: input.categories,
       });
     } catch (error) {
-      return null;
+      return buildFallbackSearchIntent({
+        query,
+        lang: input.lang,
+        categories: input.categories,
+      });
     } finally {
       inFlightRequests.delete(key);
     }
