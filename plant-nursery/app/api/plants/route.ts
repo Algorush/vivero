@@ -24,6 +24,7 @@ async function resolvePage(params: {
   query?: string;
   pageSize?: number;
   lang?: "es" | "en";
+  debug?: boolean;
 }) {
   const startedAt = Date.now();
   logPlantsRequest("request", params);
@@ -35,6 +36,7 @@ async function resolvePage(params: {
     query: params.query,
     pageSize: params.pageSize,
     lang: params.lang,
+    debug: params.debug,
   });
 
   logPlantsRequest("response", {
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
     const nativoRaw = request.nextUrl.searchParams.get("nativo");
     const nativo = nativoRaw === "true" ? true : nativoRaw === "false" ? false : undefined;
     const lang = request.nextUrl.searchParams.get("lang") === "en" ? "en" : "es";
+    const debug = request.nextUrl.searchParams.get("debug") === "1";
 
     const pageSize = parsePageSize(
       request.nextUrl.searchParams.get("pageSize")
@@ -67,6 +70,7 @@ export async function GET(request: NextRequest) {
       query,
       pageSize,
       lang,
+      debug,
     });
   } catch {
     return NextResponse.json(
@@ -85,6 +89,7 @@ export async function POST(request: NextRequest) {
       query?: string;
       pageSize?: number;
       lang?: "es" | "en";
+      debug?: boolean;
     };
 
     const lang = body.lang === "en" ? "en" : "es";
@@ -96,6 +101,7 @@ export async function POST(request: NextRequest) {
       query: body.query,
       pageSize: parsePageSize(String(body.pageSize ?? "12")),
       lang,
+      debug: body.debug,
     });
   } catch {
     return NextResponse.json(

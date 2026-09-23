@@ -3,7 +3,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { Plant } from "@/types/plant";
 import { normalizeSiteLanguage, type SiteLanguage } from "@/lib/site-language";
-import { parseSearchIntent, type SearchField, type SearchIntent } from "@/lib/search-intent";
+import { parseSearchIntent, type SearchField, type SearchIntent, type SearchIntentDebugTrace } from "@/lib/search-intent";
 
 function getSql() {
   const url = process.env.NEON_DATABASE_URL;
@@ -44,12 +44,32 @@ type SearchOptions = {
   limit?: number;
   offset?: number;
   lang?: SiteLanguage;
+  debug?: boolean;
 };
 
 type SearchResult = {
   plants: Plant[];
   total: number;
+  debug?: SearchDebugTrace;
 };
+
+export type SearchDebugEvent = {
+  step: string;
+  details: Record<string, unknown>;
+};
+
+export type SearchDebugTrace = SearchIntentDebugTrace & {
+  events: SearchDebugEvent[];
+};
+
+function pushSearchDebug(debugTrace: SearchDebugTrace | undefined, step: string, details: Record<string, unknown>): void {
+  debugTrace?.events.push({ step, details });
+}
+
+function finalizeSearchResult(result: SearchResult, debugTrace: SearchDebugTrace | undefined, step: string, details: Record<string, unknown>): SearchResult {
+  pushSearchDebug(debugTrace, step, details);
+  return debugTrace ? { ...result, debug: debugTrace } : result;
+}
 
 type SearchRankingContext = {
   searchIntent: SearchIntent | null;
@@ -338,6 +358,16 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
   await ensureLocalizedColumns();
   const lang = normalizeSiteLanguage(options.lang);
   const { query, category, nativo, limit = 12, offset = 0 } = options;
+  const debugTrace: SearchDebugTrace | undefined = options.debug ? { events: [] } : undefined;
+
+  pushSearchDebug(debugTrace, "search.request", {
+    query: query?.trim() ?? "",
+    category: category ?? "",
+    nativo: nativo ?? null,
+    limit,
+    offset,
+    lang,
+  });
 
   // Build WHERE conditions
   const conditions: string[] = ["available = true"];
@@ -366,17 +396,33 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       `SELECT COUNT(*) as total FROM plants WHERE ${whereClause}`,
       params
     ) as Record<string, unknown>[];
-    return {
+    return finalizeSearchResult(
+      {
       plants: rows.map((row) => rowToPlant(row, lang)),
       total: Number(countRows[0]?.total ?? 0),
-    };
+      },
+      debugTrace,
+      "search.branch",
+      { branch: "list", total: Number(countRows[0]?.total ?? 0), returned: rows.length }
+    );
   }
 
   const normalizedQuery = query.trim();
   const categories = await getCategories();
   const searchIntent = process.env.GEMINI_API_KEY
-    ? await parseSearchIntent({ query: normalizedQuery, lang, categories })
+    ? await parseSearchIntent({ query: normalizedQuery, lang, categories }, debugTrace)
     : null;
+  pushSearchDebug(debugTrace, "search.intent", searchIntent
+    ? {
+        intent: searchIntent.intent,
+        rewrittenQuery: searchIntent.rewrittenQuery,
+        filters: searchIntent.filters,
+        expansions: searchIntent.expansions,
+        sort: searchIntent.sort,
+        confidence: searchIntent.confidence,
+        needsClarification: searchIntent.needsClarification,
+      }
+    : { intent: null });
   const effectiveCategory = category || searchIntent?.filters.category || "";
   const effectiveNativo = nativo !== undefined ? nativo : searchIntent?.filters.nativo;
   const searchExpansions =
@@ -402,10 +448,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     });
 
     if (result.total > 0) {
-      return {
-        ...result,
-        plants: rerankPlants(result.plants, rankingContext),
-      };
+      return finalizeSearchResult(
+        {
+          ...result,
+          plants: rerankPlants(result.plants, rankingContext),
+        },
+        debugTrace,
+        "search.branch",
+        {
+          branch: "riego_hints",
+          hints: riegoHints,
+          total: result.total,
+          returned: result.plants.length,
+          top: result.plants.slice(0, 5).map((plant) => plant.slug),
+        }
+      );
     }
   }
 
@@ -441,10 +498,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
           lang,
         });
 
-        return {
-          ...result,
-          plants: rerankPlants(result.plants, rankingContext),
-        };
+        return finalizeSearchResult(
+          {
+            ...result,
+            plants: rerankPlants(result.plants, rankingContext),
+          },
+          debugTrace,
+          "search.branch",
+          {
+            branch: "category_exact",
+            categories: Array.from(matchedCategories),
+            total: result.total,
+            returned: result.plants.length,
+            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+          }
+        );
       }
     }
 
@@ -468,10 +536,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       if (allWordsMatchCategories && matchedCategories.size > 0) {
         const result = await categorySearch(Array.from(matchedCategories), { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-        return {
-          ...result,
-          plants: rerankPlants(result.plants, rankingContext),
-        };
+        return finalizeSearchResult(
+          {
+            ...result,
+            plants: rerankPlants(result.plants, rankingContext),
+          },
+          debugTrace,
+          "search.branch",
+          {
+            branch: "category_words",
+            categories: Array.from(matchedCategories),
+            total: result.total,
+            returned: result.plants.length,
+            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+          }
+        );
       }
     }
   }
@@ -492,10 +571,22 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await attributeSearch(column, matchedValues, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.total > 0) {
-        return {
-          ...result,
-          plants: rerankPlants(result.plants, rankingContext),
-        };
+        return finalizeSearchResult(
+          {
+            ...result,
+            plants: rerankPlants(result.plants, rankingContext),
+          },
+          debugTrace,
+          "search.branch",
+          {
+            branch: "exact_attribute",
+            field: column,
+            values: matchedValues,
+            total: result.total,
+            returned: result.plants.length,
+            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+          }
+        );
       }
     }
   }
@@ -524,10 +615,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
   if (hasLiteralMatch) {
     const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-    return {
-      ...result,
-      plants: rerankPlants(result.plants, rankingContext),
-    };
+    return finalizeSearchResult(
+      {
+        ...result,
+        plants: rerankPlants(result.plants, rankingContext),
+      },
+      debugTrace,
+      "search.branch",
+      {
+        branch: "full_text_literal",
+        query: searchQuery,
+        total: result.total,
+        returned: result.plants.length,
+        top: result.plants.slice(0, 5).map((plant) => plant.slug),
+      }
+    );
   }
 
   if (process.env.GEMINI_API_KEY) {
@@ -535,10 +637,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await hybridSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.plants.length > 0) {
-        return {
-          ...result,
-          plants: rerankPlants(result.plants, rankingContext),
-        };
+        return finalizeSearchResult(
+          {
+            ...result,
+            plants: rerankPlants(result.plants, rankingContext),
+          },
+          debugTrace,
+          "search.branch",
+          {
+            branch: "hybrid",
+            query: searchQuery,
+            total: result.total,
+            returned: result.plants.length,
+            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+          }
+        );
       }
     } catch {
     }
@@ -546,10 +659,21 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
 
   const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
-  return {
-    ...result,
-    plants: rerankPlants(result.plants, rankingContext),
-  };
+  return finalizeSearchResult(
+    {
+      ...result,
+      plants: rerankPlants(result.plants, rankingContext),
+    },
+    debugTrace,
+    "search.branch",
+    {
+      branch: "full_text_fallback",
+      query: searchQuery,
+      total: result.total,
+      returned: result.plants.length,
+      top: result.plants.slice(0, 5).map((plant) => plant.slug),
+    }
+  );
 }
 
 /**

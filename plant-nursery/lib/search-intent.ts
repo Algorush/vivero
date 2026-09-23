@@ -39,6 +39,15 @@ export type SearchIntentInput = {
   categories?: string[];
 };
 
+export type SearchIntentDebugEvent = {
+  step: string;
+  details: Record<string, unknown>;
+};
+
+export type SearchIntentDebugTrace = {
+  events: SearchIntentDebugEvent[];
+};
+
 type GeminiCandidate = {
   content?: {
     parts?: Array<{
@@ -321,11 +330,28 @@ function sanitizeSearchIntent(raw: unknown, input: SearchIntentInput): SearchInt
   };
 }
 
-async function callGeminiSearchIntent(input: SearchIntentInput): Promise<SearchIntent | null> {
+async function callGeminiSearchIntent(
+  input: SearchIntentInput,
+  debug?: SearchIntentDebugTrace
+): Promise<SearchIntent | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    debug?.events.push({
+      step: "gemini.skip",
+      details: { reason: "missing_api_key" },
+    });
     return null;
   }
+
+  debug?.events.push({
+    step: "gemini.request",
+    details: {
+      model: GEMINI_MODEL,
+      lang: normalizeSiteLanguage(input.lang),
+      query: input.query.trim(),
+      categories: input.categories ?? [],
+    },
+  });
 
   const payload = {
     contents: [
@@ -349,42 +375,106 @@ async function callGeminiSearchIntent(input: SearchIntentInput): Promise<SearchI
     body: JSON.stringify(payload),
   });
 
+  debug?.events.push({
+    step: "gemini.response",
+    details: {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+    },
+  });
+
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
+    debug?.events.push({
+      step: "gemini.response.error",
+      details: {
+        body: errorBody.slice(0, 1000),
+      },
+    });
     throw new Error(`Gemini search intent request failed (${response.status}): ${errorBody}`);
   }
 
   const body = (await response.json()) as GeminiResponse;
   const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
 
+  debug?.events.push({
+    step: "gemini.raw",
+    details: {
+      text,
+      candidates: body.candidates?.length ?? 0,
+    },
+  });
+
   if (!text) {
+    debug?.events.push({
+      step: "intent.fallback",
+      details: { reason: "empty_gemini_output" },
+    });
     return buildFallbackSearchIntent(input);
   }
 
   try {
     const parsed = JSON.parse(text) as unknown;
-    return sanitizeSearchIntent(parsed, input) ?? buildFallbackSearchIntent(input);
+    debug?.events.push({
+      step: "gemini.parsed",
+      details: { parsed },
+    });
+
+    const sanitized = sanitizeSearchIntent(parsed, input);
+    if (!sanitized) {
+      debug?.events.push({
+        step: "intent.fallback",
+        details: { reason: "invalid_gemini_payload" },
+      });
+    }
+
+    return sanitized ?? buildFallbackSearchIntent(input);
   } catch {
+    debug?.events.push({
+      step: "intent.fallback",
+      details: { reason: "json_parse_error" },
+    });
     return buildFallbackSearchIntent(input);
   }
 }
 
-export async function parseSearchIntent(input: SearchIntentInput): Promise<SearchIntent | null> {
+export async function parseSearchIntent(
+  input: SearchIntentInput,
+  debug?: SearchIntentDebugTrace
+): Promise<SearchIntent | null> {
   const query = input.query.trim();
   if (!query) {
     return null;
   }
+
+  debug?.events.push({
+    step: "intent.request",
+    details: {
+      query,
+      lang: normalizeSiteLanguage(input.lang),
+      categories: input.categories ?? [],
+    },
+  });
 
   const categoriesFingerprint = (input.categories ?? []).map((category) => category.trim()).filter(Boolean).join("|");
   const key = `${normalizeSiteLanguage(input.lang)}::${query.toLowerCase()}::${categoriesFingerprint.toLowerCase()}`;
 
   const cached = intentCache.get(key);
   if (cached !== undefined) {
+    debug?.events.push({
+      step: "intent.cache_hit",
+      details: { cached: Boolean(cached) },
+    });
     return cached;
   }
 
   const inFlight = inFlightRequests.get(key);
   if (inFlight) {
+    debug?.events.push({
+      step: "intent.in_flight",
+      details: {},
+    });
     return inFlight;
   }
 
@@ -394,8 +484,15 @@ export async function parseSearchIntent(input: SearchIntentInput): Promise<Searc
         query,
         lang: input.lang,
         categories: input.categories,
-      });
+      }, debug);
     } catch (error) {
+      debug?.events.push({
+        step: "intent.fallback",
+        details: {
+          reason: "gemini_exception",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      });
       return buildFallbackSearchIntent({
         query,
         lang: input.lang,
@@ -410,5 +507,19 @@ export async function parseSearchIntent(input: SearchIntentInput): Promise<Searc
 
   const result = await request;
   intentCache.set(key, result);
+
+  debug?.events.push({
+    step: "intent.result",
+    details: {
+      intent: result?.intent ?? null,
+      confidence: result?.confidence ?? null,
+      rewrittenQuery: result?.rewrittenQuery ?? null,
+      filters: result?.filters ?? null,
+      expansions: result?.expansions ?? [],
+      sort: result?.sort ?? null,
+      needsClarification: result?.needsClarification ?? null,
+    },
+  });
+
   return result;
 }

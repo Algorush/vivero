@@ -162,6 +162,9 @@ export default function PlantCatalog({
       }
       query.set("lang", lang);
       query.set("pageSize", "12");
+      if (process.env.NODE_ENV !== "production") {
+        query.set("debug", "1");
+      }
 
       const response = await fetch(`/api/plants?${query.toString()}`, {
         method: "GET",
@@ -175,6 +178,14 @@ export default function PlantCatalog({
         throw new Error(
           ("error" in data && data.error) || "No se pudo filtrar el catalogo"
         );
+      }
+
+      if (process.env.NODE_ENV !== "production" && "debug" in data && data.debug) {
+        console.groupCollapsed("[catalog-search] debug trace");
+        for (const event of data.debug.events) {
+          console.log(event.step, event.details);
+        }
+        console.groupEnd();
       }
 
       if (requestIdRef.current !== requestId) {

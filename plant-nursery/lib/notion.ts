@@ -4,6 +4,7 @@ import path from "node:path";
 import { unstable_cache } from "next/cache";
 import MiniSearch from "minisearch";
 import type { Plant } from "@/types/plant";
+import type { SearchDebugTrace } from "./db/search";
 import { readImageMap, type ImageMap } from "./image-map";
 import {
   localizedValue,
@@ -67,6 +68,7 @@ type GetPlantsPageOptions = {
   query?: string;
   pageSize?: number;
   lang?: SiteLanguage;
+  debug?: boolean;
 };
 
 type NotionRichTextItem = {
@@ -109,6 +111,7 @@ export type PlantsPageResult = {
   plants: Plant[];
   nextCursor: string | null;
   hasMore: boolean;
+  debug?: SearchDebugTrace;
 };
 
 export type NurseryProfile = {
@@ -725,18 +728,20 @@ export async function getPlantsPage(
   const query = normalizeSearchQuery(options.query) ?? "";
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
   const nativo = options.nativo;
+  const debug = options.debug ?? false;
 
   // Use Postgres if NEON_DATABASE_URL is configured
   if (process.env.NEON_DATABASE_URL) {
     const { searchPlants } = await import("./db/search");
     const offset = parseOffsetCursor(cursor);
-    const result = await searchPlants({ query, category, nativo, limit: pageSize, offset, lang });
+    const result = await searchPlants({ query, category, nativo, limit: pageSize, offset, lang, debug });
     const nextOffset = offset + result.plants.length;
     const hasMore = nextOffset < result.total;
     return {
       plants: result.plants,
       nextCursor: hasMore ? `offset:${nextOffset}` : null,
       hasMore,
+      debug: result.debug,
     };
   }
 
@@ -798,7 +803,24 @@ export async function getPlantCategories(): Promise<string[]> {
 
 // Returns one plant by slug.
 export async function getPlantBySlug(slug: string, lang: SiteLanguage = "es"): Promise<Plant | null> {
-  return getPlantBySlugCached(slug.trim(), normalizeSiteLanguage(lang));
+  const normalizedSlug = slug.trim();
+  const normalizedLang = normalizeSiteLanguage(lang);
+  const notionPlant = await getPlantBySlugCached(normalizedSlug, normalizedLang);
+
+  if (notionPlant) {
+    return notionPlant;
+  }
+
+  if (process.env.NEON_DATABASE_URL) {
+    const { getPlantBySlugFromDb } = await import("./db/search");
+    const dbPlant = await getPlantBySlugFromDb(normalizedSlug, normalizedLang);
+    if (dbPlant) {
+      return dbPlant;
+    }
+  }
+
+  const allPlants = await getPlantsCached(normalizedLang);
+  return allPlants.find((plant) => plant.slug === normalizedSlug) ?? null;
 }
 
 // Returns nursery profile from the dedicated Notion page.
