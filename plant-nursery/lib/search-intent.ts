@@ -366,6 +366,8 @@ async function callGeminiSearchIntent(
       topK: 20,
       maxOutputTokens: 512,
       responseMimeType: "application/json",
+      // Thinking models otherwise spend the output budget on hidden reasoning and truncate the JSON.
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -506,7 +508,10 @@ export async function parseSearchIntent(
   inFlightRequests.set(key, request);
 
   const result = await request;
-  intentCache.set(key, result);
+  // Rule-based fallback (fixed confidence 0.35) is direction-blind — don't cache it forever, retry Gemini next time.
+  if (!result || result.confidence !== 0.35) {
+    intentCache.set(key, result);
+  }
 
   debug?.events.push({
     step: "intent.result",

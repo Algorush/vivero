@@ -98,6 +98,15 @@ const DEFAULT_PRIORITY_EXACT_FIELDS: ExactSearchField[] = [
   "propagacion",
   "medicinal",
 ];
+// Candidate pool fetched before reranking, so relevant plants aren't discarded by a narrow SQL ORDER BY/LIMIT.
+const RANK_POOL_SIZE = 200;
+const STRONG_SIGNAL_FIELDS: ExactSearchField[] = ["riego", "exposicion", "tamano"];
+
+// Queries with 2+ strong attribute signals should skip narrow single-field branches and rely on full-context reranking.
+function countStrongSignals(intent: SearchIntent | null): number {
+  if (!intent) return 0;
+  return STRONG_SIGNAL_FIELDS.filter((field) => (intent.fieldWeights[field] ?? 0) >= 2).length;
+}
 
 function normalizeForMatch(value: string): string {
   return value
@@ -169,8 +178,10 @@ function reciprocalRankFuse(rankedLists: Plant[][]): Plant[] {
 }
 
 const SHade_HINT_WORDS = new Set(["sombra", "semisombra"]);
+const SUN_HINT_WORDS = new Set(["sol", "soleado", "soleada", "soleados", "soleadas"]);
 const LOW_WATER_HINT_WORDS = new Set(["bajo", "baja", "bajos", "bajas", "escaso", "escasa", "escasos", "escasas", "poco", "sequia", "sequia"]);
-const SIZE_HINT_WORDS = new Set(["pequeno", "pequena", "pequenos", "pequenas", "chico", "chica", "compacto", "compacta", "jardin", "patio", "maceta", "mini"]);
+const SIZE_SMALL_HINT_WORDS = new Set(["pequeno", "pequena", "pequenos", "pequenas", "chico", "chica", "compacto", "compacta", "jardin", "patio", "maceta", "mini"]);
+const SIZE_LARGE_HINT_WORDS = new Set(["grande", "grandes", "gran", "imponente", "imponentes", "alto", "alta", "altos", "altas"]);
 
 function scoreNeedleMatches(text: string, needles: string[]): number {
   const normalizedText = normalizeForMatch(text);
@@ -218,22 +229,36 @@ function getPlantRankScore(plant: Plant, context: SearchRankingContext): number 
   }
 
   if (effectiveNativo !== undefined) {
-    score += plant.nativo === effectiveNativo ? 3 : -1;
+    score += plant.nativo === effectiveNativo ? 6 : -6;
   }
 
   score += scoreNeedleMatches(normalizedName, queryWords) * 2;
   score += scoreNeedleMatches(normalizedDescription, queryWords);
   score += scoreNeedleMatches(normalizedUse, queryWords) * 0.5;
 
-  const hasShadeSignal = hasAnyWord(queryWords, SHade_HINT_WORDS) || (searchIntent?.fieldWeights.exposicion ?? 0) >= 2;
+  const hasShadeHintWord = hasAnyWord(queryWords, SHade_HINT_WORDS);
+  const hasSunHintWord = hasAnyWord(queryWords, SUN_HINT_WORDS);
+  const hasExposureSignal = hasShadeHintWord || hasSunHintWord || (searchIntent?.fieldWeights.exposicion ?? 0) >= 2;
+  const wantsSun = hasSunHintWord && !hasShadeHintWord;
   const hasLowWaterSignal = hasAnyWord(queryWords, LOW_WATER_HINT_WORDS) || (searchIntent?.fieldWeights.riego ?? 0) >= 2;
-  const hasSizeSignal = hasAnyWord(queryWords, SIZE_HINT_WORDS) || (searchIntent?.fieldWeights.tamano ?? 0) >= 2;
+  const hasSmallHintWord = hasAnyWord(queryWords, SIZE_SMALL_HINT_WORDS);
+  const hasLargeHintWord = hasAnyWord(queryWords, SIZE_LARGE_HINT_WORDS);
+  const hasSizeSignal = hasSmallHintWord || hasLargeHintWord || (searchIntent?.fieldWeights.tamano ?? 0) >= 2;
+  const wantsLarge = hasLargeHintWord && !hasSmallHintWord;
 
-  if (hasShadeSignal) {
-    if (normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra")) {
-      score += 8;
-    } else if (normalizedExposure.includes("sol pleno") || normalizedExposure.includes("sol directo")) {
-      score -= 6;
+  if (hasExposureSignal) {
+    if (wantsSun) {
+      if (normalizedExposure.includes("sol pleno") || normalizedExposure.includes("sol directo")) {
+        score += 8;
+      } else if (normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra")) {
+        score -= 6;
+      }
+    } else {
+      if (normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra")) {
+        score += 8;
+      } else if (normalizedExposure.includes("sol pleno") || normalizedExposure.includes("sol directo")) {
+        score -= 6;
+      }
     }
   }
 
@@ -250,7 +275,19 @@ function getPlantRankScore(plant: Plant, context: SearchRankingContext): number 
   if (hasSizeSignal) {
     const maxHeight = extractMaxHeight(plant.tamano);
     if (maxHeight !== null) {
-      if (maxHeight <= 2.5) {
+      if (wantsLarge) {
+        if (maxHeight >= 15) {
+          score += 8;
+        } else if (maxHeight >= 10) {
+          score += 5;
+        } else if (maxHeight >= 6) {
+          score += 2;
+        } else if (maxHeight >= 3) {
+          score -= 1;
+        } else {
+          score -= 5;
+        }
+      } else if (maxHeight <= 2.5) {
         score += 8;
       } else if (maxHeight <= 5) {
         score += 5;
@@ -263,14 +300,19 @@ function getPlantRankScore(plant: Plant, context: SearchRankingContext): number 
       }
     }
 
-    if (normalizedSize.includes("compact") || normalizedSize.includes("pequen") || normalizedCategory === "arbusto" || normalizedCategory === "cubresuelo") {
+    if (wantsLarge) {
+      if (normalizedCategory === "arbol") {
+        score += 3;
+      }
+    } else if (normalizedSize.includes("compact") || normalizedSize.includes("pequen") || normalizedCategory === "arbusto" || normalizedCategory === "cubresuelo") {
       score += 3;
     }
   }
 
   if (searchIntent?.intent === "care" || searchIntent?.intent === "mixed") {
     if (searchIntent.fieldWeights.exposicion) {
-      score += normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra") ? 2 : 0;
+      const prefersShade = normalizedExposure.includes("sombra") || normalizedExposure.includes("semisombra");
+      score += wantsSun ? (prefersShade ? 0 : 2) : (prefersShade ? 2 : 0);
     }
 
     if (searchIntent.fieldWeights.riego) {
@@ -296,6 +338,11 @@ function rerankPlants(plants: Plant[], context: SearchRankingContext): Plant[] {
       return a.index - b.index;
     })
     .map((entry) => entry.plant);
+}
+
+// Reranks the whole candidate pool first, then paginates — pagination must happen AFTER scoring, not before.
+function rankAndPage(plants: Plant[], context: SearchRankingContext, limit: number, offset: number): Plant[] {
+  return rerankPlants(plants, context).slice(offset, offset + limit);
 }
 
 function buildSearchRankingContext(
@@ -424,7 +471,6 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       }
     : { intent: null });
   const effectiveCategory = category || searchIntent?.filters.category || "";
-  const effectiveNativo = nativo !== undefined ? nativo : searchIntent?.filters.nativo;
   const searchExpansions =
     searchIntent && searchIntent.intent !== "name" && searchIntent.intent !== "category"
       ? searchIntent.expansions
@@ -434,10 +480,24 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     .filter(Boolean)
     .join(" ");
   const queryWords = searchQuery.split(/\s+/).filter(Boolean);
+  // Native/exotic wording is a hard signal too — not just when it happens to also match a category branch.
+  const hasNativeHintWord = hasAnyWord(queryWords, NATIVE_HINT_WORDS);
+  const hasExoticHintWord = hasAnyWord(queryWords, EXOTIC_HINT_WORDS);
+  const effectiveNativo =
+    nativo !== undefined
+      ? nativo
+      : hasNativeHintWord
+        ? true
+        : hasExoticHintWord
+          ? false
+          : searchIntent?.filters.nativo;
   const exactFields = getPriorityExactFields(searchIntent);
   const rankingContext = buildSearchRankingContext(searchIntent, searchQuery, effectiveCategory, effectiveNativo);
+  const strongSignalCount = countStrongSignals(searchIntent);
+  const isCompoundQuery = strongSignalCount >= 2;
+  pushSearchDebug(debugTrace, "search.signals", { strongSignalCount, isCompoundQuery, hasNativeHintWord, hasExoticHintWord });
 
-  if (isRiegoQuery(searchIntent, queryWords)) {
+  if (!isCompoundQuery && isRiegoQuery(searchIntent, queryWords)) {
     const riegoHints = getRiegoTargetHints(queryWords);
     const result = await searchByRiegoHints(riegoHints, {
       category: effectiveCategory,
@@ -448,10 +508,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
     });
 
     if (result.total > 0) {
+      const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
       return finalizeSearchResult(
         {
-          ...result,
-          plants: rerankPlants(result.plants, rankingContext),
+          plants: pagedPlants,
+          total: result.total,
         },
         debugTrace,
         "search.branch",
@@ -459,8 +520,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
           branch: "riego_hints",
           hints: riegoHints,
           total: result.total,
-          returned: result.plants.length,
-          top: result.plants.slice(0, 5).map((plant) => plant.slug),
+          returned: pagedPlants.length,
+          top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
         }
       );
     }
@@ -498,10 +559,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
           lang,
         });
 
+        const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
         return finalizeSearchResult(
           {
-            ...result,
-            plants: rerankPlants(result.plants, rankingContext),
+            plants: pagedPlants,
+            total: result.total,
           },
           debugTrace,
           "search.branch",
@@ -509,8 +571,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
             branch: "category_exact",
             categories: Array.from(matchedCategories),
             total: result.total,
-            returned: result.plants.length,
-            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+            returned: pagedPlants.length,
+            top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
           }
         );
       }
@@ -536,10 +598,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       if (allWordsMatchCategories && matchedCategories.size > 0) {
         const result = await categorySearch(Array.from(matchedCategories), { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
+        const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
         return finalizeSearchResult(
           {
-            ...result,
-            plants: rerankPlants(result.plants, rankingContext),
+            plants: pagedPlants,
+            total: result.total,
           },
           debugTrace,
           "search.branch",
@@ -547,15 +610,15 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
             branch: "category_words",
             categories: Array.from(matchedCategories),
             total: result.total,
-            returned: result.plants.length,
-            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+            returned: pagedPlants.length,
+            top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
           }
         );
       }
     }
   }
 
-  if (queryWords.length <= 3) {
+  if (!isCompoundQuery && queryWords.length <= 3) {
     const normalizedFullQuery = normalizeForMatch(normalizedQuery);
     const escapedQuery = normalizedFullQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const wordBoundaryRegex = new RegExp(`\\b${escapedQuery}\\b`);
@@ -571,10 +634,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await attributeSearch(column, matchedValues, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.total > 0) {
+        const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
         return finalizeSearchResult(
           {
-            ...result,
-            plants: rerankPlants(result.plants, rankingContext),
+            plants: pagedPlants,
+            total: result.total,
           },
           debugTrace,
           "search.branch",
@@ -583,8 +647,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
             field: column,
             values: matchedValues,
             total: result.total,
-            returned: result.plants.length,
-            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+            returned: pagedPlants.length,
+            top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
           }
         );
       }
@@ -615,10 +679,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
   if (hasLiteralMatch) {
     const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
+    const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
     return finalizeSearchResult(
       {
-        ...result,
-        plants: rerankPlants(result.plants, rankingContext),
+        plants: pagedPlants,
+        total: result.total,
       },
       debugTrace,
       "search.branch",
@@ -626,8 +691,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
         branch: "full_text_literal",
         query: searchQuery,
         total: result.total,
-        returned: result.plants.length,
-        top: result.plants.slice(0, 5).map((plant) => plant.slug),
+        returned: pagedPlants.length,
+        top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
       }
     );
   }
@@ -637,10 +702,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       const result = await hybridSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
       if (result.plants.length > 0) {
+        const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
         return finalizeSearchResult(
           {
-            ...result,
-            plants: rerankPlants(result.plants, rankingContext),
+            plants: pagedPlants,
+            total: result.total,
           },
           debugTrace,
           "search.branch",
@@ -648,8 +714,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
             branch: "hybrid",
             query: searchQuery,
             total: result.total,
-            returned: result.plants.length,
-            top: result.plants.slice(0, 5).map((plant) => plant.slug),
+            returned: pagedPlants.length,
+            top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
           }
         );
       }
@@ -659,10 +725,11 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
 
   const result = await fullTextSearch(searchQuery, { category: effectiveCategory, nativo: effectiveNativo, limit, offset, lang });
 
+  const pagedPlants = rankAndPage(result.plants, rankingContext, limit, offset);
   return finalizeSearchResult(
     {
-      ...result,
-      plants: rerankPlants(result.plants, rankingContext),
+      plants: pagedPlants,
+      total: result.total,
     },
     debugTrace,
     "search.branch",
@@ -670,8 +737,8 @@ export async function searchPlants(options: SearchOptions = {}): Promise<SearchR
       branch: "full_text_fallback",
       query: searchQuery,
       total: result.total,
-      returned: result.plants.length,
-      top: result.plants.slice(0, 5).map((plant) => plant.slug),
+      returned: pagedPlants.length,
+      top: pagedPlants.slice(0, 5).map((plant) => plant.slug),
     }
   );
 }
@@ -683,7 +750,7 @@ async function hybridSearch(
   query: string,
   options: { category?: string; nativo?: boolean; limit: number; offset: number; lang: SiteLanguage }
 ): Promise<SearchResult> {
-  const poolOptions = { ...options, limit: 200, offset: 0 };
+  const poolOptions = { ...options, limit: RANK_POOL_SIZE, offset: 0 };
 
   const [semanticResult, ftsResult] = await Promise.allSettled([
     semanticSearch(query, poolOptions),
@@ -710,8 +777,9 @@ async function hybridSearch(
 
   const fused = reciprocalRankFuse(rankedLists);
 
+  // Return the full fused pool (unsliced) so the caller can rerank with full context before paginating.
   return {
-    plants: fused.slice(options.offset, options.offset + options.limit),
+    plants: fused,
     total: fused.length,
   };
 }
@@ -741,7 +809,7 @@ async function categorySearch(
 
   const rows = await sql.query(
     `SELECT * FROM plants WHERE ${whereClause} ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    [...params, options.limit, options.offset]
+    [...params, RANK_POOL_SIZE, 0]
   ) as Record<string, unknown>[];
 
   const countRows = await sql.query(
@@ -781,7 +849,7 @@ async function attributeSearch(
 
   const rows = await sql.query(
     `SELECT * FROM plants WHERE ${whereClause} ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    [...params, options.limit, options.offset]
+    [...params, RANK_POOL_SIZE, 0]
   ) as Record<string, unknown>[];
 
   const countRows = await sql.query(
@@ -847,7 +915,7 @@ async function searchByRiegoHints(
        ELSE 0 END DESC,
        name ASC
      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    [...params, options.limit, options.offset]
+    [...params, RANK_POOL_SIZE, 0]
   ) as Record<string, unknown>[];
 
   const countRows = await sql.query(
@@ -1005,7 +1073,7 @@ async function fullTextSearch(
      WHERE ${whereClause}
      ORDER BY rank DESC
      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    [...params, options.limit, options.offset]
+    [...params, RANK_POOL_SIZE, 0]
   ) as Record<string, unknown>[];
 
   if (rows.length === 0) {
@@ -1058,7 +1126,7 @@ async function ilikeFallback(
 
   const rows = await sql.query(
     `SELECT * FROM plants WHERE ${whereClause} ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-    [...params, options.limit, options.offset]
+    [...params, RANK_POOL_SIZE, 0]
   ) as Record<string, unknown>[];
 
   const countRows = await sql.query(
