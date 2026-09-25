@@ -42,7 +42,7 @@ export const uiCopy = {
     catalogSearchAria: "Buscar plantas",
     catalogSearchButton: "Buscar",
     catalogSearchPlaceholder:
-      "Búsqueda inteligente: plantas para sombra, poca agua y jardín nativo...",
+      "Buscar plantas por nombre, cuidado o características",
     nativas: "Nativas",
     exoticas: "Exóticas",
     allCategories: "Todas",
